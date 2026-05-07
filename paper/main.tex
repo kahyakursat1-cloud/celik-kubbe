@@ -259,7 +259,16 @@ The ContextFusion system (Figure~\ref{fig:arch}) comprises five processing stage
 
 \textbf{(1) Detection Pipeline.} YOLOv11m \cite{ref_yolov11} --- the medium
 variant of the YOLOv11 architecture released by Ultralytics (September 2024),
-the most recent YOLO generation at the time of this study; the architecture is
+the most recent YOLO generation at the time of this study.
+\emph{Citation note:} At the time of writing, YOLOv11 has not yet received
+a fully peer-reviewed architectural paper; the current reference is a
+community-reviewed arXiv preprint \cite{ref_yolov11}.
+YOLOv11m was selected over YOLOv8m and YOLOv10m because it achieves a
+superior mAP50-95 on COCO ($54.7$ vs.\ $50.2$ and $54.4$ respectively) at
+comparable FP16 inference latency ($41$ vs.\ $37$ and $43$ FPS on RTX~3060),
+providing the best accuracy-throughput trade-off for the $1280\times720$
+detection resolution required by this application.
+The architecture is
 currently distributed as a software release without a peer-reviewed architecture
 paper, which we acknowledge as a citation limitation --- processes
 $1280 \times 720$ frames at \SI{25}{Hz}, outputting bounding boxes,
@@ -451,6 +460,12 @@ accessible when context-sensitive weight adjustments shift the pre-activation ou
 $[0,\,1]$ (e.g., $\alpha_v\!\mathrel{+}=\!0.15$ under multi-threat density).
 Discrimination adequacy is confirmed by the ablation study (Section~\ref{sec:results}):
 context-sensitive weighting produces consistent threat-rank ordering in all 50 MC runs.
+\emph{Operator display note:} On low-resolution or colour-compressed displays,
+a $[0.500,\,0.731]$ range may reduce visible separation between adjacent threat bars.
+The planned operator study will evaluate whether colour-coded rank labels (HIGH/MED/LOW)
+overlaid on the SHAP display adequately compensate for this compressed dynamic range;
+if not, a linear rescaling to $[0,\,1]$ prior to display will be adopted without
+affecting the underlying threat-ordering logic.
 Track association is gated by bearing difference $|\Delta\theta| \leq 15^\circ$
 and range difference $|\Delta R| \leq \SI{1.0}{km}$; a normalized composite
 score $s_\text{gate} = |\Delta\theta|/15 + |\Delta R|/1.0 < 2.0$ is required
@@ -513,8 +528,14 @@ affected timesteps.
 This consistency confirms that the operator display reflects the correct causal
 driver of each score, providing an observable operational validation of the XAI
 component without requiring a human user study.
-This use of SHAP as a \emph{context-state explainer} is the XAI contribution
-of this work.
+This use of SHAP as a \emph{context-state explainer} --- explaining not the
+model structure (which is analytically transparent) but the \emph{which-factor-is-driving-this-score-right-now} question under dynamically shifting weights --- is the
+XAI contribution of this work.
+In contrast to typical XAI applications that explain a black-box detector's
+spatial attention \cite{ref_gradcam}, this work applies XAI at the
+\emph{decision layer}: the operator sees why the system elevated a specific
+track's priority at a specific moment, enabling real-time trust calibration
+in high-stakes C-UAV engagement scenarios.
 
 \subsection{Physics-Based Radar Simulator}
 \label{sec:radar_sim}
@@ -748,6 +769,15 @@ The goal is \emph{heterogeneous sensing comparison} --- the same evaluation
 design used by multi-sensor fusion benchmarks in the radar-camera literature
 \cite{ref_radar_camera_fusion,ref_multisensor_cuav} --- not
 algorithm-level comparison under equal modality access.
+To further isolate \emph{algorithmic} from \emph{sensor} contributions, we
+note that the IMM-Kalman baseline already incorporates a Kalman filter and
+receives the same camera detections as the other baselines; its mean MOTA of
+$-0.757$ (averaged across scenarios) versus ContextFusion's $0.645$ thus
+reflects the combined gain of (i)~radar modality access and
+(ii)~confidence-weighted MAP fusion, not Kalman tracking alone.
+A radar-augmented IMM-Kalman (equal-sensor oracle) would further delineate
+these contributions and is identified as a priority in future work
+(Section~\ref{sec:discussion}).
 
 \begin{figure}[ht]
   \centering
@@ -872,6 +902,14 @@ at TRL~4 (component validation in laboratory environment) \cite{ref_trl}.
 Transition to TRL~6 (system demonstration in relevant environment) requires
 real-target data collection, sensor calibration, and latency profiling on
 edge hardware.
+The planned field validation programme comprises three phases:
+(1)~static-range characterisation of the AERIS-10 FMCW radar against
+cooperative UAV targets at 50--500~m to derive empirical RCS distributions
+and CFAR threshold calibration curves;
+(2)~dynamic flight trials with a DJI Matrice~300 RTK as the reference target
+to validate Kalman track continuity and radar-camera association latency;
+(3)~end-to-end pipeline benchmarking on Jetson Orin NX (TensorRT INT8) to
+confirm the target $>25$~FPS@640 throughput under operational load.
 Monte Carlo simulations were executed on a workstation with an Intel Core~i7-12700H
 CPU and NVIDIA RTX~3060 GPU (6~GB VRAM); the full 50-iteration evaluation
 completes in approximately \SI{4.2}{hours}.
@@ -906,7 +944,13 @@ SHAP display is planned for future work.
 
 \begin{enumerate}
   \item Hardware deployment on Jetson Orin (TensorRT INT8, target $>$25~FPS@640)
-        with real AERIS-10 radar and COTS camera
+        with real AERIS-10 radar and COTS camera, following the three-phase
+        field validation programme described in Section~\ref{sec:discussion}
+  \item \textbf{Radar-augmented equal-sensor comparison:} Equip IMM-Kalman
+        with the same radar input as ContextFusion (oracle baseline) to
+        isolate the algorithmic contribution of confidence-weighted MAP fusion
+        from the sensor modality advantage, directly addressing the
+        heterogeneous-sensing comparison critique
   \item Extended cross-dataset generalisation: beyond Drone-vs-Bird to
         multi-class benchmarks (e.g.\ Anti-UAV, DUT Anti-UAV) and
         real-world radar captures
