@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Model weights & engines (büyük binary)
+models/*.pt
+models/*.engine
+models/*.onnx
+models/*.trt
+
+# YOLO training runs (büyük)
+runs/
+
+# Logs & trace
+logs/
+*.csv.bak
+
+# LaTeX build artifacts (PDF'i tut)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+
+# Data (büyük binary; config.yaml + sim scriptleriyle tekrar üretilebilir)
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

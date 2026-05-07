@@ -1,0 +1,17 @@
+[Unit]
+Description=Celik Kubbe C-UAS Platform
+After=network.target display-manager.service
+Wants=display-manager.service
+
+[Service]
+Type=simple
+User=jetson
+Environment="DISPLAY=:0"
+Environment="QT_QPA_PLATFORM=xcb"
+WorkingDirectory=/home/jetson/bilsem_beyin/celik_kubbe
+ExecStart=/bin/bash /home/jetson/bilsem_beyin/celik_kubbe/deployment/launch.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

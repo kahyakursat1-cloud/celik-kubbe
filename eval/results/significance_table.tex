@@ -1,0 +1,52 @@
+\begin{table}[ht]
+\centering
+\caption{Pairwise Wilcoxon signed-rank test with Bonferroni correction (N=50).}
+\label{tab:significance}
+\small
+\begin{tabular}{llccccr}
+\toprule
+Comparison & Scenario & $\overline{MOTA}_A$ & $\overline{MOTA}_B$ & $p_{corr}$ & Sig. & Cliff's $\delta$ \\
+\midrule
+CelikKubbe vs SORT & single_threat & 0.674 & nan & N/A & -- & N/A \\
+CelikKubbe vs SORT & multi_threat & 0.672 & nan & N/A & -- & N/A \\
+CelikKubbe vs SORT & sensor_dropout & 0.569 & nan & N/A & -- & N/A \\
+CelikKubbe vs SORT & low_snr & 0.675 & nan & N/A & -- & N/A \\
+CelikKubbe vs DeepSORT & single_threat & 0.674 & 0.080 & 0.0000 & $\checkmark$ & +0.577 \\
+CelikKubbe vs DeepSORT & multi_threat & 0.672 & -0.086 & 0.0000 & $\checkmark$ & +0.947 \\
+CelikKubbe vs DeepSORT & sensor_dropout & 0.569 & -0.068 & 0.0000 & $\checkmark$ & +0.930 \\
+CelikKubbe vs DeepSORT & low_snr & 0.675 & -0.048 & 0.0000 & $\checkmark$ & +0.778 \\
+CelikKubbe vs ByteTrack & single_threat & 0.674 & -1.756 & 0.0003 & $\checkmark$ & +0.447 \\
+CelikKubbe vs ByteTrack & multi_threat & 0.672 & -2.169 & 0.0000 & $\checkmark$ & +0.962 \\
+CelikKubbe vs ByteTrack & sensor_dropout & 0.569 & -1.807 & 0.0000 & $\checkmark$ & +0.895 \\
+CelikKubbe vs ByteTrack & low_snr & 0.675 & -2.036 & 0.0000 & $\checkmark$ & +0.716 \\
+CelikKubbe vs IMM-Kalman & single_threat & 0.674 & -0.770 & 0.0026 & $\checkmark$ & +0.324 \\
+CelikKubbe vs IMM-Kalman & multi_threat & 0.672 & -1.059 & 0.0000 & $\checkmark$ & +0.951 \\
+CelikKubbe vs IMM-Kalman & sensor_dropout & 0.569 & -0.860 & 0.0000 & $\checkmark$ & +0.908 \\
+CelikKubbe vs IMM-Kalman & low_snr & 0.675 & -0.979 & 0.0000 & $\checkmark$ & +0.717 \\
+SORT vs DeepSORT & single_threat & nan & 0.080 & N/A & -- & N/A \\
+SORT vs DeepSORT & multi_threat & nan & -0.086 & N/A & -- & N/A \\
+SORT vs DeepSORT & sensor_dropout & nan & -0.068 & N/A & -- & N/A \\
+SORT vs DeepSORT & low_snr & nan & -0.048 & N/A & -- & N/A \\
+SORT vs ByteTrack & single_threat & nan & -1.756 & N/A & -- & N/A \\
+SORT vs ByteTrack & multi_threat & nan & -2.169 & N/A & -- & N/A \\
+SORT vs ByteTrack & sensor_dropout & nan & -1.807 & N/A & -- & N/A \\
+SORT vs ByteTrack & low_snr & nan & -2.036 & N/A & -- & N/A \\
+SORT vs IMM-Kalman & single_threat & nan & -0.770 & N/A & -- & N/A \\
+SORT vs IMM-Kalman & multi_threat & nan & -1.059 & N/A & -- & N/A \\
+SORT vs IMM-Kalman & sensor_dropout & nan & -0.860 & N/A & -- & N/A \\
+SORT vs IMM-Kalman & low_snr & nan & -0.979 & N/A & -- & N/A \\
+DeepSORT vs ByteTrack & single_threat & 0.080 & -1.756 & 0.0057 & $\checkmark$ & +0.279 \\
+DeepSORT vs ByteTrack & multi_threat & -0.086 & -2.169 & 0.0000 & $\checkmark$ & +0.874 \\
+DeepSORT vs ByteTrack & sensor_dropout & -0.068 & -1.807 & 0.0000 & $\checkmark$ & +0.829 \\
+DeepSORT vs ByteTrack & low_snr & -0.048 & -2.036 & 0.0000 & $\checkmark$ & +0.590 \\
+DeepSORT vs IMM-Kalman & single_threat & 0.080 & -0.770 & 0.0057 & $\checkmark$ & +0.270 \\
+DeepSORT vs IMM-Kalman & multi_threat & -0.086 & -1.059 & 0.0000 & $\checkmark$ & +0.748 \\
+DeepSORT vs IMM-Kalman & sensor_dropout & -0.068 & -0.860 & 0.0000 & $\checkmark$ & +0.618 \\
+DeepSORT vs IMM-Kalman & low_snr & -0.048 & -0.979 & 0.0000 & $\checkmark$ & +0.457 \\
+ByteTrack vs IMM-Kalman & single_threat & -1.756 & -0.770 & 0.0000 & $\checkmark$ & -0.424 \\
+ByteTrack vs IMM-Kalman & multi_threat & -2.169 & -1.059 & 0.0000 & $\checkmark$ & -0.558 \\
+ByteTrack vs IMM-Kalman & sensor_dropout & -1.807 & -0.860 & 0.0000 & $\checkmark$ & -0.464 \\
+ByteTrack vs IMM-Kalman & low_snr & -2.036 & -0.979 & 0.0000 & $\checkmark$ & -0.395 \\
+\bottomrule
+\end{tabular}
+\end{table}

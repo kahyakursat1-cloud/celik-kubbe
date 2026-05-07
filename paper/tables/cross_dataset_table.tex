@@ -1,0 +1,20 @@
+\begin{table}[ht]
+\centering
+\caption{Cross-Dataset Generalization (Synthetic $\to$ Drone-vs-Bird).
+         Domain gap = $\Delta$MOTA between synthetic in-distribution
+         and real out-of-distribution evaluation.
+         \textit{Note: Drone-vs-Bird is a camera-only benchmark;
+         the radar fusion component is not exercised in this evaluation.}}
+\label{tab:cross_dataset}
+\begin{tabular}{llcc}
+\toprule
+Condition & Scenario/Split & MOTA & $\Delta$MOTA \\
+\midrule
+Synthetic & single\_threat  & 0.662 & -- \\
+Synthetic & multi\_threat   & 0.662 & -- \\
+Synthetic & sensor\_dropout & 0.566 & -- \\
+Synthetic & low\_snr        & 0.664 & -- \\
+Drone-vs-Bird & test        & 0.946 & $-$0.307 \\
+\bottomrule
+\end{tabular}
+\end{table}

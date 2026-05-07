@@ -1,0 +1,24 @@
+% comparison_table.tex — generated from eval/results/monte_carlo_results.csv (N=50 per scenario)
+\begin{table}[htbp]
+\centering
+\caption{Baseline tracker comparison: mean MOTA and IDF1 per scenario ($N=50$ MC runs per scenario).
+  ContextFusion uses radar\,+\,camera fusion and Kalman; baselines receive camera-derived
+  detections only (heterogeneous sensing comparison, see §\ref{sec:results}).
+  DeepSORT with embedder=None reduces to SORT~\cite{ref_sort}.}
+\label{tab:comparison}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Method} & \multicolumn{2}{c}{\textbf{Single Threat}} & \multicolumn{2}{c}{\textbf{Multi Threat}} & \multicolumn{2}{c}{\textbf{Sensor Dropout}} & \multicolumn{2}{c}{\textbf{Low SNR}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+ & MOTA & IDF1 & MOTA & IDF1 & MOTA & IDF1 & MOTA & IDF1 \\
+\midrule
+  \textbf{ContextFusion (Ours)} & \textbf{0.674} & \textbf{0.831} & \textbf{0.672} & \textbf{0.832} & \textbf{0.569} & \textbf{0.758} & \textbf{0.675} & \textbf{0.834} \\
+  DeepSORT (\(\approx\)SORT)    & 0.080 & 0.091 & $-$0.086 & 0.090 & $-$0.068 & 0.094 & $-$0.048 & 0.103 \\
+  ByteTrack                     & $-$1.756 & 0.353 & $-$2.169 & 0.159 & $-$1.807 & 0.171 & $-$2.036 & 0.244 \\
+  IMM-Kalman                    & $-$0.770 & 0.360 & $-$1.059 & 0.194 & $-$0.860 & 0.198 & $-$0.979 & 0.260 \\
+\bottomrule
+\end{tabular}}
+\end{table}

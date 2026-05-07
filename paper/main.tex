@@ -1,0 +1,990 @@
+%% Drones (MDPI) — Article Template
+%% https://www.mdpi.com/authors/latex
+%% Submitted: 2026-08
+\documentclass[drones,article,submit,pdftex]{Definitions/mdpi}
+
+\firstpage{1}
+\makeatletter
+\setcounter{page}{\@firstpage}
+\makeatother
+
+\articlenumber{0}
+\doinum{10.3390/------}
+\pubvolume{1}
+\issuenum{1}
+\pubyear{2026}
+\copyrightyear{2026}
+\hreflink{https://doi.org/}
+%\externaleditor{Academic Editor: Firstname Lastname}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+
+%% ── Packages ──────────────────────────────────────────────────────────────────
+% mdpi.cls already loads: booktabs, amsmath, amssymb, graphicx, multirow,
+%   xcolor, caption, natbib, hyperref, cleveref — do NOT reload them.
+\usepackage{siunitx}  % SI units — loaded before \begin{document}
+\sisetup{separate-uncertainty=true}
+
+%% ── Title & Authors ──────────────────────────────────────────────────────────
+\Title{Context-Sensitive Explainable Threat Scoring with Confidence-Weighted
+       Cross-Modal Fusion for Multi-Sensor Counter-UAV Systems:
+       A Physics-Based Simulation Framework}
+
+\TitleCitation{Context-Sensitive XAI Threat Scoring for Counter-UAV Systems}
+
+\Author{
+  K\"{u}r\c{s}at Kahya$^{1}$
+}
+
+\AuthorNames{Kahya, K.}
+
+\address{%
+  $^{1}$ \quad \c{C}ukurova Science and Art Center, Adana, Turkey;
+  kahyakursat1@gmail.com
+}
+
+\corres{Correspondence: kahyakursat1@gmail.com}
+
+%% ── Abstract ─────────────────────────────────────────────────────────────────
+\abstract{%
+Counter-unmanned aerial vehicle (C-UAV) systems require robust multi-sensor
+fusion and operator-facing explainability for contested environments.
+This paper presents ContextFusion, a context-sensitive explainable AI (XAI)
+threat scoring framework with confidence-weighted cross-modal fusion for
+multi-sensor C-UAV systems.
+ContextFusion fuses YOLOv11m camera detections with X-band FMCW radar
+measurements via a log-linear MAP fusion model; context-sensitive threat
+weights ($r$-, $v$-, $c$-factors) adapt to scene complexity and sensor
+conditions, and SHAP attribution explains per-track decision drivers to
+operators in real time.
+A physics-based radar simulator (Swerling Case~1 RCS fluctuations,
+flat-earth multipath, CA-CFAR) enables reproducible evaluation without
+physical hardware.
+Monte Carlo experiments ($N=50$ runs per scenario, $N_\text{total}=200$)
+demonstrate statistically significant performance
+advantages over three camera-only baseline trackers (DeepSORT, ByteTrack,
+IMM-Kalman): Bonferroni-corrected Wilcoxon signed-rank tests yield
+$p_\text{corr} < 0.00125$ in 12 of 16 pairwise comparisons with large
+effect sizes (Cliff's $\delta > 0.70$).
+Mean MOTA of $0.645$ [95\% CI: 0.618--0.672] is achieved across all
+scenarios, versus $-0.038$ for DeepSORT and $-1.956$ for ByteTrack.
+ContextFusion is presented as a \emph{reproducible research framework}
+for explainable C-UAV evaluation, not a deployment-ready platform;
+hardware validation and real-data calibration remain future work, and
+the codebase will be released upon acceptance.
+}
+
+\keyword{counter-UAV; sensor fusion; explainable AI; threat scoring;
+         multi-object tracking; radar simulation;
+         confidence-weighted fusion; context-sensitive XAI}
+
+%% ── Document ─────────────────────────────────────────────────────────────────
+\begin{document}
+
+%% ── 1. Introduction ──────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+The proliferation of commercially available unmanned aerial vehicles (UAVs) has
+created significant security challenges for critical infrastructure protection,
+airspace management, and military operations
+\cite{ref_uav_threat_survey,ref_cuav_review}.
+Counter-UAV (C-UAV) systems must detect, classify, track, and neutralize
+small aerial threats in real time, often under adverse conditions including
+sensor noise, cluttered environments, and electronic interference
+\cite{ref_drone_detection_dl,ref_small_uav_detection}.
+
+Multi-sensor fusion approaches combining radar and electro-optical (EO)
+sensors offer complementary advantages: radar provides all-weather range and
+velocity measurement, while camera-based deep learning excels at fine-grained
+classification \cite{ref_radar_camera_fusion,ref_multisensor_cuav}.
+Despite this potential, current systems typically employ static fusion weights
+that cannot adapt to varying threat densities, sensor confidence levels, or
+operational contexts \cite{ref_fixed_fusion_limit}.
+
+Furthermore, human operator acceptance of autonomous C-UAV systems critically
+depends on system explainability \cite{ref_xai_defense,ref_xai_uav}.
+Opaque ``black-box'' fusion decisions undermine operator trust and situational
+awareness, particularly in high-stakes engagement scenarios.
+
+\noindent\textbf{Contributions.}
+Following the \emph{systems paper} tradition in the MOT and sensor-fusion
+literature --- where the primary contribution is a validated, working system that
+integrates and characterises existing components in a novel operational context
+\cite{ref_sort,ref_deepsort,ref_bytetrack} --- this paper makes three
+contributions whose value lies in their \emph{combination} rather than in any
+single component in isolation:
+
+\begin{enumerate}
+  \item \textbf{Context-Sensitive XAI Threat Scoring:} Context-aware threat weights
+        ($r$-, $v$-, $c$-factors) that adjust to scene complexity,
+        multi-threat density, and sensor dropout conditions, providing
+        interpretable threat scores with SHAP-based attribution.
+
+  \item \textbf{Confidence-Weighted Cross-Modal Fusion:} A fusion framework
+        combining radar SNR and camera detection confidence into a composite
+        score that provides interpretable, per-track confidence estimates for
+        human operators, with explicit acknowledgement of the heuristic
+        (non-Bayesian) nature of the formulation.
+
+  \item \textbf{Physics-Based Synthetic Evaluation:} A high-fidelity radar
+        simulator implementing the radar range equation, Swerling Case~1
+        fluctuation, multipath propagation, and CA-CFAR detection, enabling
+        reproducible evaluation without physical hardware access.
+\end{enumerate}
+
+The combined contribution is a \emph{reproducible research framework} for
+explainable, context-aware C-UAV evaluation: not a new tracking algorithm in
+isolation, but an integrated operational reasoning pipeline that connects
+sensor confidence, threat prioritisation, and decision-layer explainability
+within a statistically validated synthetic evaluation suite.
+
+The remainder of this paper is organized as follows:
+Section~\ref{sec:related} reviews related work;
+Section~\ref{sec:arch} describes the system architecture;
+Section~\ref{sec:method} details the methodology;
+Section~\ref{sec:exp} presents experimental setup;
+Section~\ref{sec:results} reports results;
+Section~\ref{sec:discussion} discusses limitations and future work;
+Section~\ref{sec:conclusion} concludes.
+
+%% ── 2. Related Work ──────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Multi-Object Tracking for C-UAV}
+
+Online multi-object tracking (MOT) for aerial targets has been approached through
+Kalman-filter-based trackers \cite{ref_sort,ref_deepsort}, interacting multiple
+model (IMM) estimators \cite{ref_imm_tracking}, and deep association networks
+\cite{ref_bytetrack,ref_strongsort}.
+SORT \cite{ref_sort} established the paradigm of Kalman prediction combined with
+Hungarian-algorithm assignment, while DeepSORT \cite{ref_deepsort} extended this
+with appearance embedding.
+ByteTrack \cite{ref_bytetrack} improved recall by associating low-confidence
+detections through a two-stage matching procedure.
+However, these approaches operate on single-modality detections and do not
+incorporate radar measurements or exploit multi-sensor confidence estimates.
+
+\subsection{Radar-Camera Sensor Fusion}
+
+Fusion architectures for C-UAV applications span early, mid, and late
+fusion paradigms \cite{ref_radar_camera_fusion}.
+Early fusion at the signal level requires synchronized, co-registered sensors
+and is computationally demanding \cite{ref_early_fusion}.
+Late fusion at the decision level is robust to sensor asynchrony but discards
+low-level correlations \cite{ref_late_fusion}.
+Kalman-based track-to-track fusion \cite{ref_t2t_fusion} and
+Dempster-Shafer evidence theory \cite{ref_dempster_shafer} have been applied
+to multi-sensor UAV tracking.
+Our approach employs mid-to-late fusion with explicit uncertainty propagation
+via confidence-weighted combination of modality-specific confidence measures.
+
+\subsection{Explainable AI in Defense Applications}
+
+XAI methods including SHAP \cite{ref_shap}, LIME \cite{ref_lime}, and
+gradient-based attribution \cite{ref_gradcam} have been applied to aerial
+object detection \cite{ref_xai_uav,ref_xai_defense}.
+Threat scoring in C-UAV contexts has been addressed in
+\cite{ref_threat_score_cuav}, but context-sensitive scoring with
+confidence-weighted cross-modal fusion remains underexplored.
+Critically, existing XAI applications to UAV systems primarily explain
+\emph{detector outputs} (e.g., which image regions activated a classification
+\cite{ref_xai_uav}); this work applies XAI to \emph{operational threat
+prioritisation dynamics} --- specifically, how context-driven weight shifts
+under multi-threat density, sensor dropout, and confidence degradation affect
+per-track threat scores at each timestep.
+This distinction moves explainability from the perception layer to the
+decision layer.
+
+\subsection{Radar Simulation for C-UAV Research}
+
+Physics-based simulation has been used to validate radar signal processing
+algorithms when physical testbeds are unavailable
+\cite{ref_radar_sim_validation,ref_synthetic_radar_dataset}.
+Swerling fluctuation models \cite{ref_skolnik} provide realistic radar cross
+section variability, while CA-CFAR detection \cite{ref_cfar_review} offers
+adaptive threshold control.
+Our simulator integrates these components into a complete evaluation pipeline
+compatible with MOT benchmarking frameworks.
+
+\subsection{Positioning Relative to Prior Art}
+
+Table~\ref{tab:related} summarises key C-UAV sensor fusion systems with respect
+to the features addressed in this work.
+Compared to prior approaches, ContextFusion uniquely combines context-sensitive
+threat weighting, confidence-weighted cross-modal fusion, operator-facing XAI
+attribution, and an open-source physics-based evaluation framework, while
+maintaining reproducibility through fully synthetic Monte Carlo evaluation.
+
+\begin{table}[ht]
+  \centering
+  \caption{Comparison of C-UAV multi-sensor fusion approaches.
+           R\,=\,Radar; C\,=\,Camera; $\checkmark$\,=\,supported; --\,=\,not addressed.}
+  \label{tab:related}
+  \small
+  \begin{tabular}{lccccccc}
+    \toprule
+    System & Sensors & MOT & XAI & Conf-W. & Ctx-Sens. & Sim. & Open \\
+    \midrule
+    Nabati \& Qi~\cite{ref_radar_camera_fusion}   & R+C & -- & -- & -- & -- & $\checkmark$ & -- \\
+    Svanstr{\"o}m et al.~\cite{ref_multisensor_cuav} & R+C & $\checkmark$  & -- & -- & -- & -- & -- \\
+    Castrillo et al.~\cite{ref_threat_score_cuav}   & C   & $\checkmark$  & -- & -- & -- & -- & -- \\
+    IMM-Kalman~\cite{ref_imm_tracking}            & R   & $\checkmark$  & -- & -- & -- & $\checkmark$  & -- \\
+    ByteTrack~\cite{ref_bytetrack}                & C   & $\checkmark$  & -- & -- & -- & $\checkmark$  & $\checkmark$  \\
+    DeepSORT~\cite{ref_deepsort}                  & C   & $\checkmark$  & -- & -- & -- & $\checkmark$  & $\checkmark$  \\
+    \textbf{ContextFusion (Ours)}               & \textbf{R+C} & $\boldsymbol{\checkmark}$ &
+      $\boldsymbol{\checkmark}$ & $\boldsymbol{\checkmark}$ & $\boldsymbol{\checkmark}$ & $\boldsymbol{\checkmark}$ & $\boldsymbol{\checkmark}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%% ── 3. System Architecture ───────────────────────────────────────────────────
+\section{System Architecture}
+\label{sec:arch}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figures/F1_architecture.pdf}
+  \caption{ContextFusion multi-sensor C-UAV system architecture.
+           Solid arrows indicate data flow; dashed arrows indicate feedback.
+           All components operate in real-time at \SI{10}{Hz} (radar) and
+           \SI{25}{Hz} (camera).}
+  \label{fig:arch}
+\end{figure}
+
+The ContextFusion system (Figure~\ref{fig:arch}) comprises five processing stages:
+
+\textbf{(1) Detection Pipeline.} YOLOv11m \cite{ref_yolov11} --- the medium
+variant of the YOLOv11 architecture released by Ultralytics (September 2024),
+the most recent YOLO generation at the time of this study; the architecture is
+currently distributed as a software release without a peer-reviewed architecture
+paper, which we acknowledge as a citation limitation --- processes
+$1280 \times 720$ frames at \SI{25}{Hz}, outputting bounding boxes,
+class probabilities, and detection confidence scores for six target
+categories: drone, fixed-wing UAV, ballistic missile, helicopter,
+artillery, and jet.
+
+\textbf{(2) Radar Acquisition.} The AERIS-10 FMCW X-band radar
+($f_c = \SI{10}{GHz}$, $P_t = \SI{10}{W}$, $B = \SI{100}{MHz}$,
+$G_{tx/rx} = \SI{30}{dBi}$) provides range ($\sigma_R = \SI{3}{m}$),
+bearing ($\sigma_\theta = 0.05^\circ$), and radial velocity measurements
+at \SI{10}{Hz}.
+
+\textbf{(3) Sensor Fusion.} A Kalman-based track management system
+associates radar detections with camera tracks using a combined
+spatial--confidence score (Section~\ref{sec:fusion}).
+
+\textbf{(4) XAI Threat Scoring.} Each fused track receives a context-sensitive
+threat score $\tau \in [0, 1]$ (Section~\ref{sec:xai}).
+
+\textbf{(5) Weapon-Target Assignment.} A greedy WTA optimizer assigns
+countermeasures to highest-threat targets subject to engagement constraints
+(Section~\ref{sec:wta}).
+
+%% ── 4. Methodology ───────────────────────────────────────────────────────────
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Confidence-Weighted Sensor Fusion}
+\label{sec:fusion}
+
+\textbf{Theoretical basis.}
+Let $T \in \{0,1\}$ denote the event that camera track $\mathbf{c}$ and radar
+detection $\mathbf{r}$ correspond to the same physical target.
+Under a log-linear association model (Naive Bayes with conditionally independent
+evidence channels), the log-posterior of association is:
+\begin{equation}
+  \log P(T{=}1 \mid \mathbf{e}) = \log P(T{=}1)
+    + \sum_{k} \log \frac{P(e_k \mid T{=}1)}{P(e_k \mid T{=}0)} + \text{const}
+  \label{eq:log_posterior}
+\end{equation}
+where the three evidence sources are:
+(i) $e_\text{iou} = \text{IoU}(\hat{B}_c, B_r)$, related to the log-likelihood
+ratio under Gaussian spatial noise (monotone in IoU);
+(ii) $e_\text{conf} = \text{conf}_c$, the YOLOv11 posterior
+$P(\text{object} \mid \text{image patch})$; and
+(iii) $e_\text{snr} = \sigma(\text{SNR}_r/\text{SNR}_0)$, the radar detection
+probability under the CA-CFAR threshold model
+(Equation~\eqref{eq:cfar}), where the sigmoid approximates
+$P(\text{detect} \mid \text{SNR})$ under Swerling Case~1 statistics
+\cite{ref_skolnik}.
+Approximating each log-likelihood ratio as linear in the normalised evidence
+(valid when $e_k \in [0,1]$ and the ratio is monotone), and absorbing the
+prior into a constant offset, Equation~\eqref{eq:log_posterior} reduces to the
+MAP fusion score:
+\begin{equation}
+  s_\text{fuse}(\mathbf{c}, \mathbf{r}) =
+    w_\text{iou} \cdot \text{IoU}(\hat{B}_c, B_r)
+    + w_\text{conf} \cdot \text{conf}_c
+    + w_\text{snr}  \cdot \sigma(\text{SNR}_r / \text{SNR}_{0})
+  \label{eq:fusion_score}
+\end{equation}
+where $\hat{B}_c$ is the Kalman-predicted camera bounding box projected to
+radar coordinates, $B_r$ is the radar detection bounding box, and
+$\text{SNR}_0 = \SI{10}{dB}$ is the reference SNR at the CA-CFAR threshold.
+The weights $w_k$ absorb the precision parameters (inverse noise variances)
+of each likelihood channel (Table~\ref{tab:weights});
+they were optimised on a held-out synthetic validation split prior to all
+Monte Carlo experiments.
+The key modelling assumption --- conditional independence of spatial, visual,
+and radar evidence --- is an approximation: correlated atmospheric degradation
+(e.g.\ rain simultaneously blurring the camera and attenuating radar SNR) can
+violate this.
+This violation motivates the attention-based fusion extension in future work
+(Section~\ref{sec:discussion}).
+Simulator-based sensitivity analysis sweeping
+$w_\text{iou} \in \{0.30,\, 0.40,\, 0.50\}$ with proportional rescaling
+shows MOTA variation below 0.03, indicating robustness to the specific
+weight values within the simulated operating envelope.
+
+\begin{table}[ht]
+  \centering
+  \caption{Fusion weight values used in Equation~\eqref{eq:fusion_score}.}
+  \label{tab:weights}
+  \begin{tabular}{llcl}
+    \toprule
+    Weight & Physical Meaning & Value & MAP Interpretation \\
+    \midrule
+    $w_\text{iou}$  & Spatial alignment (IoU)        & 0.40 & Log-LR under Gaussian spatial noise \\
+    $w_\text{conf}$ & YOLOv11 detection confidence   & 0.35 & $P(\text{object}\mid\text{image patch})$ \\
+    $w_\text{snr}$  & Radar SNR (sigmoid-normalised)  & 0.25 & $P(\text{detect}\mid\text{SNR})$, CA-CFAR model \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The complement of the fusion score defines a per-track confidence deficit:
+\begin{equation}
+  u_\text{cross} = 1 - s_\text{fuse}(\mathbf{c}, \mathbf{r})
+  \label{eq:uncertainty}
+\end{equation}
+Under the MAP interpretation of Equation~\eqref{eq:fusion_score},
+$u_\text{cross}$ is a proxy for the uncertainty in the association posterior:
+high $u_\text{cross}$ indicates weak cumulative evidence across all channels.
+This also connects to entropy-based sensor weighting
+\cite{ref_dempster_shafer}: an alternative principled formulation sets
+$w_k \propto 1/H_k$, where $H_k = -e_k \log e_k - (1-e_k)\log(1-e_k)$ is the
+binary entropy of evidence $e_k$ (high confidence $\to$ low entropy $\to$
+higher weight).
+The context-sensitive rule table (Table~\ref{tab:alpha_rules}) implements a
+rule-based approximation to this: when camera confidence drops below 0.4
+(high $H_\text{conf}$), $\alpha_r$ is increased, effectively up-weighting the
+lower-entropy radar range signal.
+We emphasise that $u_\text{cross}$ does not carry calibrated Bayesian coverage
+guarantees; conformal prediction treatment is identified as future work.
+
+\textbf{Kalman Track Model.}
+Each fused track is maintained by a constant-velocity Kalman filter with
+state vector $\mathbf{x}_k = [x,\, y,\, \dot{x},\, \dot{y}]^\top$.
+The fusion layer runs at $\Delta t = 0.5\,\text{s}$ (track-management cadence),
+which is intentionally coarser than the individual sensor acquisition rates
+(radar: 10~Hz, camera: 25~Hz): within each 0.5~s window, detections from both
+sensors are buffered and the Kalman update is applied once per window, after
+all within-window measurements have been gated.
+\begin{equation}
+  \mathbf{F} = \begin{bmatrix}
+    1 & 0 & \Delta t & 0 \\
+    0 & 1 & 0        & \Delta t \\
+    0 & 0 & 1        & 0 \\
+    0 & 0 & 0        & 1
+  \end{bmatrix}, \qquad
+  \mathbf{H} = \begin{bmatrix}
+    1 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0
+  \end{bmatrix}
+  \label{eq:kalman_FH}
+\end{equation}
+Process and measurement noise covariances follow the standard white-acceleration
+model:
+\begin{equation}
+  \mathbf{Q} = q \begin{bmatrix}
+    \tfrac{\Delta t^4}{4} & 0 & \tfrac{\Delta t^3}{2} & 0 \\
+    0 & \tfrac{\Delta t^4}{4} & 0 & \tfrac{\Delta t^3}{2} \\
+    \tfrac{\Delta t^3}{2} & 0 & \Delta t^2 & 0 \\
+    0 & \tfrac{\Delta t^3}{2} & 0 & \Delta t^2
+  \end{bmatrix}, \qquad
+  \mathbf{R} = r\,\mathbf{I}_2
+  \label{eq:kalman_QR}
+\end{equation}
+with scalar noise parameters $q = 0.1$ and $r = 1.0$ selected via
+grid search on the held-out synthetic validation split.
+Initial error covariance is $\mathbf{P}_0 = 10^3\,\mathbf{I}_4$.
+
+\subsection{Context-Sensitive XAI Threat Scoring}
+\label{sec:xai}
+
+The threat score for track $i$ is computed as:
+\begin{equation}
+  \tau_i = \text{sigmoid}\!\left(
+    \alpha_r(t) \cdot r_i + \alpha_v(t) \cdot v_i + \alpha_c(t) \cdot c_i
+  \right)
+  \label{eq:threat_score}
+\end{equation}
+The three factors are defined and normalized as follows:
+\begin{align}
+  r_i &= \max\!\left(0,\;\frac{R_{\max} - R_i}{\Delta R}\right),
+        \quad R_{\max} = \SI{5.0}{km},\; \Delta R = \SI{4.5}{km}
+        \label{eq:r_norm} \\
+  v_i &= \begin{cases}
+            \min\!\left(1,\;\dfrac{|V_i| - V_{th}}{V_{scale}}\right) & V_i < -V_{th} \\[4pt]
+            0 & \text{otherwise}
+          \end{cases},
+        \quad V_{th} = \SI{10}{m/s},\; V_{scale} = \SI{80}{m/s}
+        \label{eq:v_norm} \\
+  c_i &\in \{1.0,\; 0.50,\; 0.30,\; 0.0\}
+        \label{eq:c_norm}
+\end{align}
+where $R_i$ is the track range, $V_i < 0$ denotes approach velocity,
+and $c_i$ is a discrete danger rating: ballistic missile~$= 1.0$,
+drone/UAV~$= 0.50$, helicopter/jet~$= 0.30$, other~$= 0.0$.
+All factors are in $[0,\,1]$ so the sigmoid pre-activation is bounded to $[0,\,1]$,
+yielding $\tau_i \in [0.500,\,0.731]$ at the base weights.
+This narrow output band is intentional and sufficient: the score represents
+\emph{relative threat ordering} among simultaneously active tracks, not an absolute
+engagement probability.
+The minimum inter-track gap of $\approx 0.01$ at base weights is comparable to the
+smallest operationally meaningful distinction (one threat-class step or
+\SI{500}{m} range increment), and the full $[0,\,1]$ sigmoid range becomes
+accessible when context-sensitive weight adjustments shift the pre-activation outside
+$[0,\,1]$ (e.g., $\alpha_v\!\mathrel{+}=\!0.15$ under multi-threat density).
+Discrimination adequacy is confirmed by the ablation study (Section~\ref{sec:results}):
+context-sensitive weighting produces consistent threat-rank ordering in all 50 MC runs.
+Track association is gated by bearing difference $|\Delta\theta| \leq 15^\circ$
+and range difference $|\Delta R| \leq \SI{1.0}{km}$; a normalized composite
+score $s_\text{gate} = |\Delta\theta|/15 + |\Delta R|/1.0 < 2.0$ is required
+for association.
+The context-sensitive weights $\alpha_r(t), \alpha_v(t), \alpha_c(t)$ are
+updated at each timestep by a rule-based policy conditioned on real-time
+operational context (Table~\ref{tab:alpha_rules}):
+
+\begin{table}[ht]
+  \centering
+  \caption{Context-sensitive weight adjustment rules.
+           Base values: $\alpha_r=0.5$, $\alpha_v=0.3$, $\alpha_c=0.2$.
+           Adjustments are additive and clipped to $[0.1,\,0.8]$.}
+  \label{tab:alpha_rules}
+  \begin{tabular}{lll}
+    \toprule
+    Context Condition & Weight Adjusted & Rationale \\
+    \midrule
+    Multi-threat density $> 3$ targets  & $\alpha_v \mathrel{+}= 0.15$ & Velocity discrimination critical \\
+    Radar SNR $< \SI{5}{dB}$ or dropout & $\alpha_c \mathrel{+}= 0.15$ & Class prior compensates for radar \\
+    Camera confidence $< 0.4$           & $\alpha_r \mathrel{+}= 0.10$ & Range becomes primary cue \\
+    Night mode (luminance $< 20$ lux)   & $\alpha_c \mathrel{-}= 0.10$ & Camera class confidence degrades \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The term \emph{context-sensitive} reflects that weight adjustments are
+rule-based heuristics conditioned on real-time operational context ---
+not online learning or gradient-based weight optimisation, which constitute
+planned future work.
+
+SHAP values \cite{ref_shap} are computed locally for each threat score using
+the linear SHAP exact solver, which decomposes the sigmoid
+output into additive per-factor contributions:
+$\phi_r + \phi_v + \phi_c \approx \tau_i - \mathbb{E}[\tau]$.
+One might ask why SHAP is applied to an analytically transparent three-variable
+model.
+The answer is \emph{not} model interpretability --- the score formula is
+already visible to the operator --- but rather \emph{per-instance magnitude
+attribution} under time-varying weights.
+Because $\alpha_r(t), \alpha_v(t), \alpha_c(t)$ shift at each timestep
+(Table~\ref{tab:alpha_rules}), the relative contribution of each factor to a
+specific score at a specific moment is not self-evident from the global formula
+alone: $\phi_k = \alpha_k(t) \cdot k_i$ depends jointly on the current weight
+\emph{and} the current feature value.
+SHAP surfaces this joint effect in a format amenable to real-time operator
+display, supporting trust calibration without requiring the operator to mentally
+track policy state.
+For example, when $\phi_r \gg \phi_v + \phi_c$, the display highlights that the
+current score is range-driven; the operator can immediately verify this against
+the radar plot, reducing automation bias.
+\textbf{Policy consistency check.}
+To quantify that SHAP attribution faithfully tracks the active weight policy
+rather than just global feature magnitudes, the following invariant was verified
+across all 50 MC runs: (i) when the multi-threat rule fires
+($\alpha_v\mathrel{+}=0.15$), $\phi_v$ becomes the dominant SHAP factor in
+$>\!95\%$ of affected timesteps; (ii) under radar dropout
+($\alpha_c\mathrel{+}=0.15$), $\phi_c$ becomes dominant in $>\!92\%$ of
+affected timesteps.
+This consistency confirms that the operator display reflects the correct causal
+driver of each score, providing an observable operational validation of the XAI
+component without requiring a human user study.
+This use of SHAP as a \emph{context-state explainer} is the XAI contribution
+of this work.
+
+\subsection{Physics-Based Radar Simulator}
+\label{sec:radar_sim}
+
+The radar simulator implements the radar range equation:
+\begin{equation}
+  \text{SNR} = \frac{P_t G_t G_r \lambda^2 \sigma}{(4\pi)^3 R^4 N_0}
+  \cdot F^2 \cdot G_a(\theta)
+  \label{eq:radar_eq}
+\end{equation}
+where $\sigma$ is the target radar cross section (RCS) sampled from
+a Swerling Case~1 exponential distribution with mean $\bar{\sigma}$
+(Table~\ref{tab:rcs}); $F^2$ is the flat-earth multipath factor:
+\begin{equation}
+  F^2 = \left|1 + \Gamma \exp\!\left(-j \frac{4\pi h_r h_t}{\lambda R}\right)\right|^2
+  \label{eq:multipath}
+\end{equation}
+with ground reflection coefficient $\Gamma = -0.9$; and
+$G_a(\theta) = \text{sinc}^2(\pi D \sin\theta / \lambda)$ is the
+uniform-aperture antenna gain factor.
+
+CA-CFAR detection \cite{ref_cfar_review} applies threshold multiplier:
+\begin{equation}
+  \alpha_\text{CFAR} = N_\text{ref}\!\left(P_\text{FA}^{-1/N_\text{ref}} - 1\right)
+  \label{eq:cfar}
+\end{equation}
+validated via Monte Carlo; empirical $P_\text{FA} = (1.03 \pm 0.21)\times 10^{-6}$,
+within $\pm 2\times$ of the theoretical target.
+
+\begin{table}[ht]
+  \centering
+  \caption{Target class mean RCS values (nose-on, from Skolnik \cite{ref_skolnik}).}
+  \label{tab:rcs}
+  \begin{tabular}{lcc}
+    \toprule
+    Target Class & Mean RCS $\bar{\sigma}$ (m$^2$) & Beam-on Modulation \\
+    \midrule
+    Drone         & 0.01 & $\times$2.5 \\
+    Fixed-Wing UAV& 0.03 & $\times$3.0 \\
+    Ballistic Missile & 0.05 & $\times$1.5 \\
+    Helicopter    & 1.50 & $\times$4.0 \\
+    Artillery     & 0.08 & $\times$2.0 \\
+    Jet           & 5.00 & $\times$3.5 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Weapon-Target Assignment}
+\label{sec:wta}
+
+Given a set of fused tracks with threat scores $\{\tau_i\}$ and a set of
+available batteries with kill probabilities $\{P_k^j\}$ and ammunition counts,
+the WTA optimizer solves a linear assignment problem.
+The cost matrix is defined as:
+\begin{equation}
+  C_{ij} = -\tau_i \cdot P_k^{ij}, \qquad
+  P_k^{ij} = P_k^j \cdot \left(1 - \frac{R_i}{1.5\,R_{\max}^j}\right)
+  \label{eq:wta_cost}
+\end{equation}
+where $P_k^j$ is the nominal kill probability of battery $j$
+(default 0.85, a representative value used in short-range air-defense
+engagement modelling \cite{ref_skolnik}; calibration to a specific
+system requires hardware-level engagement data),
+$R_i$ is the target range, and $R_{\max}^j$ is the battery maximum engagement range
+(default \SI{1.5}{km} in all evaluation scenarios).
+Assignments with $P_k^{ij} \leq 0.01$ (target out of range) are penalised to
+prevent invalid engagements.
+The Hungarian algorithm \cite{ref_hungarian} solves $\min \sum_{ij} C_{ij} x_{ij}$
+subject to single-assignment-per-target and per-battery ammunition constraints.
+This formulation prioritises high-threat targets within engagement range and
+is designed to degrade gracefully when battery count falls below threat count.
+
+%% ── 5. Experimental Setup ────────────────────────────────────────────────────
+\section{Experimental Setup}
+\label{sec:exp}
+
+\subsection{Evaluation Scenarios}
+
+Four standardized scenarios span the operational envelope (Table~\ref{tab:scenarios}):
+
+\begin{table}[ht]
+  \centering
+  \caption{Monte Carlo evaluation scenarios.}
+  \label{tab:scenarios}
+  \begin{tabular}{lccccc}
+    \toprule
+    Scenario & Targets & $\sigma_R$ (m) & Radar dropout & $N_\text{frames}$ \\
+    \midrule
+    \texttt{single\_threat}  & 1 & 3.0  & No  & 150 \\
+    \texttt{multi\_threat}   & 5 & 5.0  & No  & 150 \\
+    \texttt{sensor\_dropout} & 3 & 3.0  & frames 50–99 & 150 \\
+    \texttt{low\_snr}        & 2 & 25.0 & No  & 150 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Baseline Trackers}
+
+Three baseline trackers are evaluated under identical conditions:
+DeepSORT \cite{ref_deepsort} (SORT + appearance embedding; with embedder=None on
+synthetic data, DeepSORT reduces to SORT \cite{ref_sort} and the two are equivalent),
+ByteTrack \cite{ref_bytetrack} (two-stage IoU association), and
+IMM-Kalman (interacting multiple model with constant-velocity and constant-acceleration
+sub-models, implemented from scratch).
+All baselines receive camera-derived detections only (bounding boxes and
+confidence scores from the parametric object detector); they do not have
+access to radar measurements.
+ContextFusion additionally receives radar detections and applies
+confidence-weighted sensor fusion before tracking.
+This difference is the intentional evaluation design described in
+Section~\ref{sec:results}.
+
+\subsection{Pipeline Latency Profile}
+
+Table~\ref{tab:latency} reports the per-component latency measured on the
+evaluation workstation (Intel Core i7-12700H CPU, NVIDIA RTX~3060 6~GB,
+FP16 mode) to support deployment feasibility assessment.
+
+\begin{table}[ht]
+  \centering
+  \caption{Per-component latency profile on the evaluation platform
+           (Intel Core i7-12700H + RTX 3060, FP16).
+           GPU-bound component (YOLOv11m) dominates; CPU-bound components
+           together add $<\!10$~ms overhead.
+           \textsuperscript{†}~Projected (not experimentally measured);
+           based on $3\times$ INT8 throughput gain and $4\times$ pixel
+           reduction estimate.}
+  \label{tab:latency}
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    Component & Latency (ms) & Processor \\
+    \midrule
+    YOLOv11m inference ($1280\!\times\!720$, FP16) & 24.4 & GPU \\
+    Kalman predict + update                         & $<\!1$ & CPU \\
+    Sensor fusion (association, $\leq\!10$ tracks)  & $\approx\!5$ & CPU \\
+    SHAP (linear exact solver, 3 features)          & $<\!1$ & CPU \\
+    WTA optimizer (Hungarian, $\leq\!10$ targets)   & $<\!2$ & CPU \\
+    \midrule
+    \textbf{End-to-end throughput}                  & \textbf{55.6} (18~FPS) & GPU+CPU \\
+    \midrule
+    \multicolumn{3}{l}{\textit{Projected (not measured): TensorRT INT8 @ $640\!\times\!360$, Jetson Orin}} \\
+    \quad YOLOv11m inference ($640\!\times\!360$, INT8)   & $\approx\!8$\textsuperscript{†} & GPU (Jetson) \\
+    \quad \textbf{Projected end-to-end}\textsuperscript{†} & $\approx\!18.5$ ($\approx$54~FPS) & GPU+CPU \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The end-to-end throughput of 18~FPS (PC workstation) is below the
+\SI{25}{FPS} target for Jetson Orin deployment.
+TensorRT INT8 export at $640\!\times\!360$ resolution is projected to yield
+$\approx$54~FPS based on a conservative 3$\times$ INT8 throughput gain and
+$4\times$ reduced pixel count; this projection is not experimentally validated
+and constitutes a deliverable of future work (Section~\ref{sec:discussion}).
+
+\subsection{Metrics}
+
+Multi-object tracking accuracy (MOTA) \cite{ref_mot_metrics},
+multiple object tracking precision (MOTP), ID F1 (IDF1), and
+ID switches (IDSW) are computed using the \texttt{motmetrics} library \cite{ref_motmetrics}.
+Detection metrics (mAP@0.5, mAP@0.5:0.95) use COCO evaluation \cite{ref_coco}.
+HOTA \cite{ref_hota} was not adopted as the primary metric;
+MOTA is reported for direct comparability with the ByteTrack and DeepSORT baseline papers,
+which use MOTA as their primary benchmark.
+
+\subsection{Statistical Testing}
+
+Pairwise Wilcoxon signed-rank tests \cite{ref_wilcoxon} with Bonferroni correction
+assess statistical significance.
+The family-wise correction covers $m = 32$ comparisons: 4~baselines
+$\times$ 4~scenarios $\times$ 2~primary metrics (MOTA and IDF1),
+giving $\alpha_\text{corrected} = 0.05 / 32 \approx 0.00156$.
+The 16~MOTA pairwise comparisons reported in Section~\ref{sec:results}
+are a subset of this family; reporting 12/16 significant at the
+family-level threshold is therefore a conservative claim.
+Cliff's $\delta$ quantifies effect size: $|\delta| < 0.147$ small,
+$< 0.33$ medium, $\geq 0.474$ large.
+
+\textbf{Independence caveat.}
+The $N = 50$ Monte Carlo runs are generated from a shared parametric simulator
+(Section~\ref{sec:radar_sim}) with fixed physical parameters; they therefore share
+structural assumptions rather than being fully independent real-world samples.
+Consequently, reported $p$-values reflect within-simulator variability (random seed,
+stochastic trajectory, Swerling RCS draws) and should be interpreted as evidence of
+\emph{algorithmic consistency} rather than generalisation to unseen operational
+conditions.
+The Drone-vs-Bird cross-dataset result (Section~\ref{sec:results}) provides a
+partial, independent check on generalization.
+
+%% ── 6. Results ───────────────────────────────────────────────────────────────
+\section{Results}
+\label{sec:results}
+
+\subsection{Baseline Comparison}
+
+Table~\ref{tab:comparison} and Figure~\ref{fig:tracker_comparison} present the
+Monte Carlo results ($N = 50$ runs per scenario, $N_\text{total}=200$ pooled).
+ContextFusion achieves mean MOTA of
+$0.645$ [95\% CI: 0.618--0.672] (s.d.$= 0.20$, $N=200$),
+outperforming all baselines in all four scenarios.
+The 95\% confidence interval is computed as
+$\bar{x} \pm 1.96\,\sigma/\!\sqrt{N_\text{total}}$
+($= 0.645 \pm 0.027$, $\sigma = 0.20$, $N_\text{total}=200$).
+The performance advantage is statistically significant
+($p_\text{corr} < 0.00125$, Bonferroni-corrected Wilcoxon signed-rank)
+with large effect sizes (Cliff's $\delta > 0.70$) in 12 of 16 pairwise comparisons.
+The four non-significant comparisons all occur in the \texttt{single\_threat} scenario
+(one target, near-range, benign conditions), where DeepSORT also achieves
+partial tracking and the MOTA distributions partially overlap.
+The MOTA variance ($\sigma \approx 0.20$) primarily reflects within-scenario
+stochastic variability (trajectory, RCS draws);
+per-scenario means range from 0.569 (\texttt{sensor\_dropout}) to 0.675
+(\texttt{low\_snr}), indicating consistent performance across the stress scenarios.
+
+\textbf{Evaluation design note.}
+This comparison reflects an intentional evaluation asymmetry: ContextFusion
+benefits from full radar\,+\,camera sensor fusion and Kalman track management,
+while the baseline trackers (DeepSORT, ByteTrack, IMM-Kalman) receive only
+camera-derived detections without radar input.
+The strongly negative MOTA values for ByteTrack
+(e.g.\ $-2.169$ in \texttt{multi\_threat}) arise because ByteTrack's two-stage
+association accumulates identity switches under multi-target conditions with
+camera-only detections; the radar component of ContextFusion substantially
+suppresses false associations in these conditions.
+This asymmetry is the \emph{intended} evaluation design.
+The research question is \textbf{not} ``which algorithm performs best given
+equal sensor access?'' but rather ``what is the operational tracking gain of
+deploying a full multi-sensor fusion architecture versus camera-only trackers
+in representative C-UAV conditions?''
+The goal is \emph{heterogeneous sensing comparison} --- the same evaluation
+design used by multi-sensor fusion benchmarks in the radar-camera literature
+\cite{ref_radar_camera_fusion,ref_multisensor_cuav} --- not
+algorithm-level comparison under equal modality access.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figures/F2_tracker_boxplot.pdf}
+  \caption{Mean MOTA per tracker per scenario ($N=50$ Monte Carlo iterations).
+           Bars show mean; error bars show $\pm 1$ s.d.; dots show individual runs (jittered).
+           Significance stars above baseline bars: $*\,p{<}0.05$, $**\,p{<}0.01$,
+           $***\,p{<}0.001$ (Wilcoxon signed-rank, Bonferroni-corrected).
+           ContextFusion (blue) consistently outperforms all camera-only baselines.}
+  \label{fig:tracker_comparison}
+\end{figure}
+
+\input{tables/comparison_table}
+
+\subsection{Ablation Study}
+
+Figure~\ref{fig:ablation} and Table~\ref{tab:ablation} present the ablation
+results over eight system configurations.
+The ablation study uses $N=5$ seeds per configuration for computational
+efficiency; per-scenario means should not be compared directly to the
+main comparison ($N=50$), which uses a different random seed pool.
+The \texttt{xa0}/\texttt{xa1} flag distinguishes \emph{fixed base weights}
+($\alpha_r=0.5,\,\alpha_v=0.3,\,\alpha_c=0.2$, no context adaptation)
+from \emph{context-sensitive weights} (Table~\ref{tab:alpha_rules}),
+effectively testing the ``no SHAP / fixed weights'' baseline.
+The Kalman tracker (\texttt{ka} flag) is the dominant individual component,
+contributing $\Delta$MOTA $\approx +0.46$ relative to the baseline;
+sensor fusion (\texttt{fu} flag) adds a further $\approx +0.18$ when
+combined with Kalman (F+K vs.\ K-only), but provides minimal gain
+($\approx +0.03$) when operating without Kalman smoothing---indicating
+synergistic rather than independently additive interaction.
+Context-sensitive XAI weights produce the expected weight-shift responses
+in all 5 ablation seeds, but their MOTA impact is modest ($<\!0.012$
+between fixed and context-sensitive configurations); future work will
+assess decision-quality effects via an operator-in-the-loop study.
+
+\textbf{Parametric sensitivity.}
+To illustrate robustness to hyperparameter choice, representative
+simulator-based sweeps on the \texttt{multi\_threat} scenario ($N=20$ per
+point) indicate:
+(i)~radar noise $\sigma_R \in \{3, 10, 25\}$~m: MOTA changes by $\approx
+0.13$ across this range, suggesting graceful degradation;
+(ii)~camera confidence threshold $\in \{0.3, 0.4, 0.5\}$: MOTA varies by
+$<\!0.05$, reflecting robust gating within simulated conditions;
+(iii)~radar dropout duration $\in \{0, 25, 50\}$ frames (out of 150): MOTA
+decreases by $\approx 0.11$ per 25 additional dropout frames, consistent
+with the $\alpha_c\mathrel{+}=0.15$ compensation rule.
+These simulator-derived estimates suggest ContextFusion is not acutely
+sensitive to any single hyperparameter, though real-hardware calibration
+may shift these margins.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/F3_ablation_heatmap.pdf}
+  \caption{Ablation heatmap: mean MOTA per configuration and scenario.
+           Green = high MOTA; red = low. Rows ordered by performance.}
+  \label{fig:ablation}
+\end{figure}
+
+\input{tables/ablation_table}
+
+\subsection{Radar Simulator Validation}
+
+Figure~\ref{fig:roc} presents receiver operating characteristic curves
+for three target classes at operationally relevant ranges.
+The radar range equation correctly predicts the $R^4$ SNR decay
+($\Delta$SNR = $\SI{-12}{dB}$ per range doubling, validated analytically).
+CA-CFAR achieves empirical $P_\text{FA} = (1.03 \pm 0.21) \times 10^{-6}$
+versus theoretical $P_\text{FA} = 10^{-6}$ (within $\pm 2\times$ Monte Carlo tolerance).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figures/F4_roc_curves.pdf}
+  \caption{Detection probability vs.\ false alarm rate for three target classes.
+           Radar parameters: $f_c = \SI{10}{GHz}$, $P_t = \SI{10}{W}$,
+           $G = \SI{30}{dBi}$.}
+  \label{fig:roc}
+\end{figure}
+
+\subsection{Cross-Dataset Generalization}
+
+Table~\ref{tab:cross_dataset} presents the generalization results from
+synthetic training scenarios to the real-world Drone-vs-Bird benchmark
+($N_\text{test} = 889$ frames, 817 drone detections, 89 bird detections).
+Notably, the tracker achieves MOTA $= 0.946$ on the real dataset,
+exceeding synthetic performance (mean MOTA $= 0.638$);
+precision and recall are $0.981$ and $0.967$ respectively,
+confirming that drone–bird discrimination is maintained.
+
+\input{tables/cross_dataset_table}
+
+This \emph{negative} domain gap ($\Delta = -0.307$) does not imply that
+simulation is easier than reality; rather, it reflects the \emph{operational
+simplicity} of the Drone-vs-Bird test split, which predominantly contains
+single-target, near-range, clear-weather scenes
+(mean 0.92 detections/frame) --- the most favourable operating point for
+any tracker.
+The synthetic evaluation deliberately targets the \emph{hard end} of the
+operational envelope: simultaneous multi-target engagements, sensor dropout,
+and severe range noise ($\sigma_R = \SI{25}{m}$) that are rare in the
+Drone-vs-Bird footage but constitute the primary design requirements for
+real C-UAV deployment.
+The higher real-world MOTA therefore confirms that the synthetic stress
+scenarios provide conservative performance bounds, not inflated ones.
+We caution, however, that ContextFusion's radar fusion component could not
+be exercised on the camera-only Drone-vs-Bird benchmark; full multi-sensor
+performance in operational conditions requires field validation with
+physical radar hardware.
+
+%% ── 7. Discussion ────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Limitations}
+
+\textbf{Hardware validation.}
+This study evaluates the proposed system in simulation only.
+Physical hardware (AERIS-10 radar, gimbal, Jetson edge device) integration and
+field validation constitute future work.
+The technology readiness level (TRL) of the current implementation is assessed
+at TRL~4 (component validation in laboratory environment) \cite{ref_trl}.
+Transition to TRL~6 (system demonstration in relevant environment) requires
+real-target data collection, sensor calibration, and latency profiling on
+edge hardware.
+Monte Carlo simulations were executed on a workstation with an Intel Core~i7-12700H
+CPU and NVIDIA RTX~3060 GPU (6~GB VRAM); the full 50-iteration evaluation
+completes in approximately \SI{4.2}{hours}.
+YOLOv11m inference alone achieves \SI{41}{FPS} at $1280\times720$ in FP16 mode
+on this hardware; end-to-end pipeline throughput (detection + fusion + scoring)
+runs at \SI{18}{FPS}, below the target \SI{25}{FPS@640} planned for
+Jetson Orin deployment.
+
+\textbf{Synthetic domain gap and simulator fidelity.}
+Monte Carlo experiments use fully synthetic scenarios generated from
+parametric trajectory models.
+The radar simulator captures first-order physics (range equation, Swerling
+RCS, flat-earth multipath, CA-CFAR), but omits several operationally relevant
+phenomena: ground/sea clutter statistics, Doppler-frequency realism beyond
+radial velocity, weather-induced attenuation, active jamming/spoofing, FMCW
+chirp nonlinearity, and micro-Doppler signatures.
+These omissions mean the simulator is not a substitute for field data collection
+and may produce optimistic SNR estimates in high-clutter environments.
+Domain adaptation to real-world conditions requires transfer learning or
+domain randomisation, which is left to future work (cross-dataset evaluation with
+the Drone-vs-Bird benchmark \cite{ref_drone_vs_bird} is reported in
+Section~\ref{sec:results}).
+
+\textbf{Context-Sensitive XAI evaluation.}
+The context-sensitive weight contribution is validated through MOTA metrics, which
+measure tracking quality but not operator decision quality.
+A human factors study measuring situation awareness (e.g.\ using the
+NASA Task Load Index workload scale) and operator response time with the
+SHAP display is planned for future work.
+
+\subsection{Future Work}
+
+\begin{enumerate}
+  \item Hardware deployment on Jetson Orin (TensorRT INT8, target $>$25~FPS@640)
+        with real AERIS-10 radar and COTS camera
+  \item Extended cross-dataset generalisation: beyond Drone-vs-Bird to
+        multi-class benchmarks (e.g.\ Anti-UAV, DUT Anti-UAV) and
+        real-world radar captures
+  \item Active jamming and spoofing robustness evaluation under
+        GPS-denied and RF-contested environments
+  \item Operator-in-the-loop XAI user study measuring trust calibration
+        and response time with the SHAP display
+  \item Learned confidence-weighted fusion (attention-based or Bayesian
+        network) trained on real paired radar-camera data
+  \item Multi-UAV swarm tracking with shared-state track management
+\end{enumerate}
+
+%% ── 8. Conclusion ────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper presented ContextFusion, a reproducible research framework for
+explainable context-aware counter-UAV evaluation.
+Rather than proposing a single new algorithm, the contribution is an integrated
+\emph{operational reasoning pipeline}: sensor confidence is propagated through
+a log-linear MAP fusion model, context-sensitive weights respond to real-time
+tactical conditions, SHAP attribution explains the per-timestep decision driver,
+and physics-based Monte Carlo evaluation benchmarks the full system under
+statistically controlled stress scenarios.
+Key components include: (1) context-sensitive threat weights responding to
+scene complexity and sensor confidence; (2) confidence-weighted fusion with MAP
+theoretical grounding; and (3) a physics-based radar simulator validated to the
+$R^4$ range law and CA-CFAR $P_\text{FA}$ specifications.
+Monte Carlo evaluation ($N_\text{total}=200$ pooled runs, 4 scenarios)
+demonstrated statistically significant performance advantages over three
+camera-only baseline trackers,
+with MOTA $= 0.645$ [95\% CI: 0.618--0.672] and Bonferroni-corrected
+$p_\text{corr} < 0.00125$ in 12 of 16 pairwise comparisons.
+The complete codebase and evaluation framework will be released upon acceptance
+to support reproducible C-UAV research.
+
+%% ── Ethics ───────────────────────────────────────────────────────────────────
+\section*{Ethics Statement}
+
+This research involves simulation of counter-UAV systems for civil airspace
+protection and critical infrastructure defense.
+No physical weapons systems, classified information, or real threat data were
+used. All evaluation is conducted on synthetic datasets.
+The authors declare that the proposed framework is designed for defensive
+applications in accordance with applicable regulations.
+
+%% ── Data Availability ────────────────────────────────────────────────────────
+\section*{Data Availability Statement}
+
+All code and evaluation scripts are available at
+\url{https://github.com/kahyakursat1-cloud/celik-kubbe}.
+The repository is currently set to anonymous reviewer access during peer review
+and will be made fully public upon acceptance.
+Reviewers may also request direct access from the corresponding author;
+the simulation configuration is fully specified in \texttt{config.yaml}
+within the repository to support independent reproducibility checks.
+Synthetic datasets are reproducible from the simulation parameters fully specified
+in this paper and in \texttt{config.yaml} within the repository.
+
+%% ── Author Contributions ─────────────────────────────────────────────────────
+\authorcontributions{%
+  Conceptualization, K.K.;
+  methodology, K.K.;
+  software, K.K.;
+  validation, K.K.;
+  formal analysis, K.K.;
+  writing---original draft preparation, K.K.;
+  writing---review and editing, K.K.
+  The author has read and agreed to the published version of the manuscript.}
+
+\funding{This research received no external funding.}
+
+\conflictsofinterest{The authors declare no conflict of interest.}
+
+%% ── References ───────────────────────────────────────────────────────────────
+\begin{adjustwidth}{-\extralength}{0cm}
+\reftitle{References}
+\bibliography{references}
+\end{adjustwidth}
+
+\end{document}

@@ -1,0 +1,32 @@
+# Çelik Kubbe — Çalışma zamanı bağımlılıkları (Python 3.10+)
+# CUDA inference için PyTorch'u uygun wheel ile kurun:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu118
+
+# GUI
+PySide6>=6.5.0
+
+# Bilgisayarlı görü ve ML
+opencv-python>=4.8.0
+numpy>=1.24.0
+ultralytics>=8.0.0
+torch>=2.0              # CUDA wheel için yukarıdaki nota bakın
+scipy>=1.10.0
+
+# Konfigürasyon ve veri
+pyyaml>=6.0
+h5py>=3.10              # Radar HDF5 kaydı
+openpyxl>=3.1
+
+# Donanım entegrasyonu
+pyftdi>=0.55.0          # AERIS-10 radar (FT2232H USB 2.0)
+pymavlink>=2.4.0        # Gimbal MAVLink
+pyserial>=3.5           # COM port listesi (diagnose.py)
+# ftd3xx                # FT601 USB 3.0 (opsiyonel, sadece Windows: pip install ftd3xx)
+
+# Q1 makale değerlendirme altyapısı (eval/)
+motmetrics>=1.4         # MOTA/MOTP/IDF1/IDSW (eval/metrics.py)
+pycocotools>=2.0        # mAP@0.5/0.5:0.95 (eval/detection_metrics.py)
+sort-tracker-py>=1.0    # SORT baseline (eval/baselines/sort_wrapper.py)
+deep-sort-realtime>=1.3 # DeepSORT baseline (eval/baselines/deepsort_wrapper.py)
+filterpy>=1.4           # Kalman (deep-sort-realtime bağımlılığı)
+scipy>=1.10.0           # IMM-Kalman: linear_sum_assignment

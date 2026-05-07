@@ -1,0 +1,29 @@
+% ablation_table.tex — updated for ContextFusion paper submission
+\begin{table}[htbp]
+\centering
+\caption{Ablation study: mean MOTA over $N=5$ seeds per configuration, 4 scenarios.
+  F\,=\,Fusion, K\,=\,Kalman, X\,=\,Context-Sensitive XAI.
+  Ablation uses $N=5$ seeds for computational efficiency and should not be
+  compared directly to the main comparison ($N=50$, Table~\ref{tab:comparison}).
+  Dagger ($\dagger$) marks the architecture category corresponding to the
+  main comparison configuration.}
+\label{tab:ablation}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Configuration} & \textbf{Single} & \textbf{Multi} & \textbf{Dropout} & \textbf{Low SNR} \\
+\midrule
+Base (no F, no K, no X)       & 0.304{\tiny$\pm$0.63} & 0.120{\tiny$\pm$0.49} & $-$0.029{\tiny$\pm$0.49} & 0.015{\tiny$\pm$0.52} \\
+XAI only (no F, no K)          & 0.347{\tiny$\pm$0.66} & 0.090{\tiny$\pm$0.50} & $-$0.036{\tiny$\pm$0.52} & 0.021{\tiny$\pm$0.54} \\
+Kalman only (no F, no X)       & 0.650{\tiny$\pm$0.22} & 0.543{\tiny$\pm$0.22} & 0.489{\tiny$\pm$0.23} & 0.585{\tiny$\pm$0.18} \\
+Kalman + XAI (no F)            & 0.696{\tiny$\pm$0.19} & 0.613{\tiny$\pm$0.17} & 0.528{\tiny$\pm$0.20} & 0.633{\tiny$\pm$0.16} \\
+Fusion only (no K, no X)       & 0.485{\tiny$\pm$0.77} & 0.048{\tiny$\pm$0.54} & $-$0.079{\tiny$\pm$0.54} & 0.086{\tiny$\pm$0.60} \\
+Fusion + XAI (no K)            & 0.475{\tiny$\pm$0.78} & 0.024{\tiny$\pm$0.55} & $-$0.095{\tiny$\pm$0.55} & 0.070{\tiny$\pm$0.61} \\
+\midrule
+F+K, fixed weights$^\dagger$   & 0.860{\tiny$\pm$0.18} & 0.767{\tiny$\pm$0.10} & 0.624{\tiny$\pm$0.16} & 0.739{\tiny$\pm$0.16} \\
+\textbf{ContextFusion Full (F+K+X, Ours)} & \textbf{0.855{\tiny$\pm$0.16}} & \textbf{0.765{\tiny$\pm$0.10}} & \textbf{0.635{\tiny$\pm$0.17}} & \textbf{0.732{\tiny$\pm$0.15}} \\
+\bottomrule
+\end{tabular}}
+\end{table}

@@ -1,0 +1,77 @@
+# =====================================================================
+# ÇELİK KUBBE — TEKNOFEST 2026
+# Merkezi yapılandırma dosyası
+# =====================================================================
+
+# --- Model ---
+model:
+  yolu: "models/yolo11m_celikkubbe.pt"
+  onnx_yolu: "models/yolo11m_celikkubbe.onnx"
+  guven_esik: 0.40
+  tracker: "bytetrack.yaml"
+
+# --- Kamera ---
+kamera:
+  index: 0
+  fps: 30                  # _cam_timer: 33ms
+
+# --- Radar (AERIS-10 Entegrasyonu) ---
+radar:
+  aci_genisligi: 120.0           # Kameranın görüş açısı (derece)
+  mesafe_kalibrasyon: 1000       # bbox_diag × kalibrasyon → mesafe_km
+  # AERIS-10 bağlantı ayarları
+  aktif: true                    # Radar köprüsünü etkinleştir
+  mock: true                     # true: sahte veri, false: gerçek donanım
+  usb_tipi: "ft2232h"            # "ft2232h" (USB 2.0) veya "ft601" (USB 3.0)
+  kayit_aktif: false             # HDF5 veri kaydı
+  # Fiziksel parametreler
+  merkez_frekans_ghz: 10.5
+  bant_genisligi_mhz: 200
+  prf_hz: 5000
+  maks_menzil_km: 3.0            # AERIS-10N=3, AERIS-10E=20
+  tarama_hizi_rpm: 15.0
+
+# --- Sensör Füzyon ---
+fuzyon:
+  aktif: true                    # Radar+Kamera füzyonunu etkinleştir
+  aci_esigi_deg: 15.0            # Açısal eşleşme eşiği
+  mesafe_esigi_km: 1.0           # Mesafe eşleşme eşiği
+  zaman_asimi_s: 5.0             # İz düşürme süresi
+
+# --- Gimbal / Takip ---
+gimbal:
+  aktif: true
+  mock: true                     # true: Donanım yok, simüle çalış
+  port: "COM3"
+  baud: 115200
+
+
+# --- Tehdit Sınıfları ---
+tehditler:
+  siniflar:
+    - "BalisticMissile"
+    - "Drone"
+    - "Helicopter"
+    - "Jet"
+    - "Artillery"
+    - "FixedWingUAV"
+  renkler:
+    dusman: "red"          # Kırmızı
+    belirsiz: "yellow"     # Sarı
+    dost: "green"          # Yeşil
+
+# --- Aşama Yapılandırması (Şartname §5) ---
+asama:
+  aktif: 1                 # Başlangıç aşaması (1, 2 veya 3)
+
+# --- Simülasyon ---
+simulasyon:
+  rastgele_tehdit_arali: 2.0   # saniye (model yoksa)
+  max_simule_tehdit: 8
+
+# --- Loglama ---
+loglama:
+  seviye: "INFO"
+  dosya: "logs/celik_kubbe.log"
+  max_bayt: 5242880
+  yedek_sayisi: 3

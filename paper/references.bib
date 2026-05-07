@@ -1,0 +1,442 @@
+%% references.bib — Çelik Kubbe Q1 Makale Atıfları
+%% Hedef: ≥40 atıf, ≥30%'u Q1 (Drones, TAES, RA-L, TGRS, etc.)
+%% Son güncelleme: 2026-05-06
+
+%% ── Counter-UAV & Threat Surveys ─────────────────────────────────────────────
+
+@article{ref_uav_threat_survey,
+  author  = {Shi, Xiangyu and Yang, Chenguang and Xie, Wenxuan and Liang, Chao
+             and Shi, Zhiguo and Chen, Junlin},
+  title   = {Anti-Drone System with Multiple Surveillance Technologies:
+             Architecture, Implementation, and Challenges},
+  journal = {IEEE Communications Magazine},
+  volume  = {56},
+  number  = {4},
+  pages   = {68--74},
+  year    = {2018},
+  doi     = {10.1109/MCOM.2018.1700430},
+}
+
+@article{ref_cuav_review,
+  author  = {Guvenc, Ismail and Koohifar, Farshad and Singh, Sudarshan and
+             Sichitiu, Mihail L. and Matolak, David},
+  title   = {Detection, Tracking, and Interdiction for Amateur Drones},
+  journal = {IEEE Communications Magazine},
+  volume  = {56},
+  number  = {4},
+  pages   = {75--81},
+  year    = {2018},
+  doi     = {10.1109/MCOM.2018.1700455},
+}
+
+@article{ref_drone_detection_dl,
+  author  = {Seidaliyeva, Ulzhalgas and Ilipbayeva, Lyazzat and Taissariyeva, Karlygash
+             and Smailov, Nurbek and Matson, Eric T.},
+  title   = {Advances and Challenges in Drone Detection and Classification
+             Techniques: A State-of-the-Art Review},
+  journal = {Sensors},
+  volume  = {24},
+  number  = {1},
+  pages   = {125},
+  year    = {2024},
+  doi     = {10.3390/s24010125},
+}
+
+@article{ref_small_uav_detection,
+  author  = {Hammer, Michael and Hebel, Marcus and Arens, Michael},
+  title   = {Potential of Radar and Lidar Technologies for Small-UAV Detection},
+  journal = {Proceedings of SPIE},
+  volume  = {10178},
+  pages   = {101780B},
+  year    = {2017},
+  doi     = {10.1117/12.2262585},
+}
+
+%% ── Radar-Camera Sensor Fusion ────────────────────────────────────────────────
+
+@article{ref_radar_camera_fusion,
+  author  = {Nabati, Ramin and Qi, Hairong},
+  title   = {Radar-Camera Sensor Fusion for Joint Object Detection and Distance
+             Estimation in Autonomous Vehicles},
+  journal = {arXiv preprint},
+  volume  = {arXiv:2009.08265},
+  year    = {2020},
+}
+
+@article{ref_multisensor_cuav,
+  author  = {Svanstr{\"o}m, Filip and Alonso-Fernandez, Fernando and Englund, Cristofer},
+  title   = {Drone Detection and Tracking in Real-Time by Fusion of Different
+             Sensing Modalities},
+  journal = {Drones},
+  volume  = {6},
+  number  = {11},
+  pages   = {317},
+  year    = {2022},
+  doi     = {10.3390/drones6110317},
+}
+
+@article{ref_fixed_fusion_limit,
+  author  = {Khaleghi, Bahador and Khamis, Alaa and Karray, Fakhreddine O.
+             and Razavi, Saiedeh N.},
+  title   = {Multisensor Data Fusion: A Review of the State-of-the-Art},
+  journal = {Information Fusion},
+  volume  = {14},
+  number  = {1},
+  pages   = {28--44},
+  year    = {2013},
+  doi     = {10.1016/j.inffus.2011.08.001},
+}
+
+@inproceedings{ref_early_fusion,
+  author    = {Nobis, Felix and Geisslinger, Maximilian and Weber, Markus
+               and Betz, Johannes and Lienkamp, Markus},
+  title     = {A Deep Learning-Based Radar and Camera Sensor Fusion Architecture
+               for Object Detection},
+  booktitle = {Proceedings of the IEEE Symposium on Sensor Data Fusion (SDF)},
+  pages     = {1--7},
+  year      = {2019},
+  doi       = {10.1109/SDF.2019.8916629},
+}
+
+@inproceedings{ref_late_fusion,
+  author    = {Aeberhard, Michael and Schlipsing, Marc and Effertz, Jan and
+               Kaempchen, Nico},
+  title     = {Object Existence Probability Fusion and Tracking with a
+               Radar-Camera System},
+  booktitle = {Proceedings of IEEE Intelligent Vehicles Symposium},
+  pages     = {1--7},
+  year      = {2012},
+  doi       = {10.1109/IVS.2012.6232260},
+}
+
+@article{ref_t2t_fusion,
+  author  = {Bar-Shalom, Yaakov and Campo, Leon},
+  title   = {The Effect of the Common Process Noise on the Two-Sensor Fused-Track
+             Covariance},
+  journal = {IEEE Transactions on Aerospace and Electronic Systems},
+  volume  = {22},
+  number  = {6},
+  pages   = {803--805},
+  year    = {1986},
+  doi     = {10.1109/TAES.1986.310815},
+}
+
+@book{ref_dempster_shafer,
+  author    = {Shafer, Glenn},
+  title     = {A Mathematical Theory of Evidence},
+  publisher = {Princeton University Press},
+  address   = {Princeton, NJ, USA},
+  year      = {1976},
+}
+
+%% ── Multi-Object Tracking ─────────────────────────────────────────────────────
+
+@inproceedings{ref_sort,
+  author    = {Bewley, Alex and Ge, Zongyuan and Ott, Lionel and
+               Ramos, Fabio and Upcroft, Ben},
+  title     = {Simple Online and Realtime Tracking},
+  booktitle = {Proceedings of IEEE ICIP},
+  pages     = {3464--3468},
+  year      = {2016},
+  doi       = {10.1109/ICIP.2016.7533003},
+}
+
+@inproceedings{ref_deepsort,
+  author    = {Wojke, Nicolai and Bewley, Alex and Paulus, Dietrich},
+  title     = {Simple Online and Realtime Tracking with a Deep Association Metric},
+  booktitle = {Proceedings of IEEE ICIP},
+  pages     = {3645--3649},
+  year      = {2017},
+  doi       = {10.1109/ICIP.2017.8296962},
+}
+
+@inproceedings{ref_bytetrack,
+  author    = {Zhang, Yifu and Sun, Peize and Jiang, Yi and others},
+  title     = {ByteTrack: Multi-Object Tracking by Associating Every Detection Box},
+  booktitle = {Proceedings of ECCV},
+  pages     = {1--21},
+  year      = {2022},
+  doi       = {10.1007/978-3-031-20047-2_1},
+}
+
+@article{ref_strongsort,
+  author  = {Du, Yunhao and Zhao, Zhicheng and Song, Yang and others},
+  title   = {StrongSORT: Make DeepSORT Great Again},
+  journal = {IEEE Transactions on Multimedia},
+  year    = {2023},
+  doi     = {10.1109/TMM.2023.3240881},
+}
+
+@article{ref_imm_tracking,
+  author  = {Mazor, Eliahu and Averbuch, Amir and Bar-Shalom, Yaakov and
+             Dayan, Judith},
+  title   = {Interacting Multiple Model Methods in Target Tracking: A Survey},
+  journal = {IEEE Transactions on Aerospace and Electronic Systems},
+  volume  = {34},
+  number  = {1},
+  pages   = {103--123},
+  year    = {1998},
+  doi     = {10.1109/7.640267},
+}
+
+%% ── XAI ──────────────────────────────────────────────────────────────────────
+
+@inproceedings{ref_shap,
+  author    = {Lundberg, Scott M. and Lee, Su-In},
+  title     = {A Unified Approach to Interpreting Model Predictions},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {30},
+  year      = {2017},
+}
+
+@inproceedings{ref_lime,
+  author    = {Ribeiro, Marco Tulio and Singh, Sameer and Guestrin, Carlos},
+  title     = {"Why Should I Trust You?": Explaining the Predictions
+               of Any Classifier},
+  booktitle = {Proceedings of ACM SIGKDD},
+  pages     = {1135--1144},
+  year      = {2016},
+  doi       = {10.1145/2939672.2939778},
+}
+
+@inproceedings{ref_gradcam,
+  author    = {Selvaraju, Ramprasaath R. and Cogswell, Michael and Das, Abhishek
+               and Vedantam, Ramakrishna and Parikh, Devi and Batra, Dhruv},
+  title     = {Grad-{CAM}: Visual Explanations from Deep Networks via
+               Gradient-Based Localization},
+  booktitle = {Proceedings of IEEE ICCV},
+  pages     = {618--626},
+  year      = {2017},
+  doi       = {10.1109/ICCV.2017.74},
+}
+
+@article{ref_xai_uav,
+  author  = {{\c{C}}etin, Ender and Barrado, Cristina and Salam{\'i}, Esther and others},
+  title   = {Analyzing Deep Reinforcement Learning Model Decisions with Shapley
+             Additive Explanations for Counter Drone Operations},
+  journal = {Applied Intelligence},
+  volume  = {54},
+  pages   = {12095--12111},
+  year    = {2024},
+  doi     = {10.1007/s10489-024-05733-2},
+}
+
+@article{ref_xai_defense,
+  author  = {Angelov, Plamen and Soares, Eduardo},
+  title   = {Towards Explainable Deep Neural Networks (xDNN)},
+  journal = {Neural Networks},
+  volume  = {130},
+  pages   = {185--194},
+  year    = {2020},
+  doi     = {10.1016/j.neunet.2020.07.010},
+}
+
+@article{ref_threat_score_cuav,
+  author  = {Castrillo, Vittorio Ugo and Manco, Angelo and Pascarella, Domenico
+             and Gigante, Giovanni},
+  title   = {A Review of Counter-{UAS} Technologies for Cooperative Defensive
+             Teams of Drones},
+  journal = {Drones},
+  volume  = {6},
+  number  = {3},
+  pages   = {65},
+  year    = {2022},
+  doi     = {10.3390/drones6030065},
+}
+
+%% ── Radar & Signal Processing ─────────────────────────────────────────────────
+
+@book{ref_skolnik,
+  author    = {Skolnik, Merrill I.},
+  title     = {Introduction to Radar Systems},
+  edition   = {3rd},
+  publisher = {McGraw-Hill},
+  year      = {2001},
+}
+
+@book{ref_richards,
+  author    = {Richards, Mark A. and Scheer, James A. and Holm, William A.},
+  title     = {Principles of Modern Radar: Basic Principles},
+  publisher = {SciTech Publishing},
+  year      = {2010},
+}
+
+@article{ref_cfar_review,
+  author  = {Gandhi, P.P. and Kassam, S.A.},
+  title   = {Analysis of CFAR Processors in Nonhomogeneous Background},
+  journal = {IEEE Transactions on Aerospace and Electronic Systems},
+  volume  = {24},
+  number  = {4},
+  pages   = {427--445},
+  year    = {1988},
+  doi     = {10.1109/7.7185},
+}
+
+@inproceedings{ref_radar_sim_validation,
+  author    = {Ngo, Anh-Dung and Bauer, Michael and Resch, Michael M.},
+  title     = {A Multi-Layered Approach for Measuring the Simulation-to-Reality
+               Gap of Radar Perception for Autonomous Driving},
+  booktitle = {Proceedings of the IEEE Intelligent Transportation Systems
+               Conference (ITSC)},
+  pages     = {4008--4014},
+  year      = {2021},
+  doi       = {10.1109/ITSC48978.2021.9564521},
+}
+
+@inproceedings{ref_synthetic_radar_dataset,
+  author    = {Ouaknine, Arthur and Newson, Alasdair and Rebut, Julien
+               and Tupin, Florence and P{\'e}rez, Patrick},
+  title     = {{CARRADA} Dataset: Camera and Automotive Radar with
+               Range-Angle-Doppler Annotations},
+  booktitle = {Proceedings of the IEEE International Conference on Pattern
+               Recognition (ICPR)},
+  pages     = {5068--5075},
+  year      = {2021},
+  doi       = {10.1109/ICPR48806.2021.9413181},
+}
+
+%% ── Evaluation Frameworks ─────────────────────────────────────────────────────
+
+@inproceedings{ref_mot_metrics,
+  author    = {Bernardin, Keni and Stiefelhagen, Rainer},
+  title     = {Evaluating Multiple Object Tracking Performance: The CLEAR MOT Metrics},
+  booktitle = {EURASIP Journal on Image and Video Processing},
+  volume    = {2008},
+  pages     = {1},
+  year      = {2008},
+  doi       = {10.1155/2008/246309},
+}
+
+@inproceedings{ref_coco,
+  author    = {Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and others},
+  title     = {Microsoft COCO: Common Objects in Context},
+  booktitle = {Proceedings of ECCV},
+  pages     = {740--755},
+  year      = {2014},
+  doi       = {10.1007/978-3-319-10602-1_48},
+}
+
+@article{ref_hota,
+  author    = {Luiten, Jonathon and others},
+  title     = {{HOTA}: A Higher Order Metric for Evaluating Multi-Object Tracking},
+  journal   = {International Journal of Computer Vision},
+  volume    = {129},
+  pages     = {548--578},
+  year      = {2021},
+  doi       = {10.1007/s11263-020-01375-2},
+}
+
+@article{ref_motmetrics,
+  author  = {Dendorfer, Patrick and others},
+  title   = {MOTChallenge: A Benchmark for Single-Camera Multiple Target Tracking},
+  journal = {International Journal of Computer Vision},
+  volume  = {129},
+  pages   = {845--881},
+  year    = {2021},
+  doi     = {10.1007/s11263-020-01393-0},
+}
+
+%% ── Deep Learning & Object Detection ─────────────────────────────────────────
+
+@article{ref_yolov11,
+  author  = {Khanam, Rahima and Hussain, Muhammad},
+  title   = {YOLOv11: An Overview of the Key Architectural Enhancements},
+  journal = {arXiv preprint},
+  volume  = {arXiv:2410.17725},
+  year    = {2024},
+}
+
+@inproceedings{ref_drone_vs_bird,
+  author    = {Coluccia, Angelo and Fascista, Alessio and Schumann, Arne
+               and Sommer, Lars and others},
+  title     = {Drone-vs-Bird Detection Challenge at {IEEE} {AVSS2021}},
+  booktitle = {Proceedings of the IEEE International Conference on Advanced
+               Video and Signal-Based Surveillance (AVSS)},
+  year      = {2021},
+  doi       = {10.1109/AVSS52988.2021.9663844},
+}
+
+%% ── Statistics & Methodology ─────────────────────────────────────────────────
+
+@article{ref_wilcoxon,
+  author  = {Wilcoxon, Frank},
+  title   = {Individual Comparisons by Ranking Methods},
+  journal = {Biometrics Bulletin},
+  volume  = {1},
+  number  = {6},
+  pages   = {80--83},
+  year    = {1945},
+  doi     = {10.2307/3001968},
+}
+
+@article{ref_demsar,
+  author  = {Dem{\v{s}}ar, Janez},
+  title   = {Statistical Comparisons of Classifiers over Multiple Data Sets},
+  journal = {Journal of Machine Learning Research},
+  volume  = {7},
+  pages   = {1--30},
+  year    = {2006},
+}
+
+%% ── Technology Readiness ─────────────────────────────────────────────────────
+
+@techreport{ref_trl,
+  author      = {{European Commission}},
+  title       = {Technology Readiness Levels},
+  institution = {Horizon 2020},
+  year        = {2014},
+  url         = {https://ec.europa.eu/research/participants/data/ref/h2020/wp/2014_2015/annexes/h2020-wp1415-annex-g-trl_en.pdf},
+}
+
+%% ── Edge AI & Deployment ─────────────────────────────────────────────────────
+
+@article{ref_tensorrt,
+  author  = {{NVIDIA Corporation}},
+  title   = {{TensorRT} Developer Guide},
+  year    = {2024},
+  url     = {https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/},
+}
+
+@article{ref_jetson_cuav,
+  author  = {Mittal, Sparsh},
+  title   = {A Survey on Optimized Implementation of Deep Learning Models on
+             the NVIDIA Jetson Platform},
+  journal = {Journal of Systems Architecture},
+  volume  = {97},
+  pages   = {428--442},
+  year    = {2019},
+  doi     = {10.1016/j.sysarc.2019.01.011},
+}
+
+
+@article{ref_mavlink,
+  author  = {Meier, Lorenz and Honegger, Dominik and Pollefeys, Marc},
+  title   = {PX4: A Node-Based Multithreaded Open Source Robotics Framework
+             for Deeply Embedded Platforms},
+  booktitle = {Proceedings of IEEE ICRA},
+  pages   = {6235--6240},
+  year    = {2015},
+  doi     = {10.1109/ICRA.2015.7140074},
+}
+
+@article{ref_fmcw_radar,
+  author  = {Stove, A.G.},
+  title   = {Linear FMCW Radar Techniques},
+  journal = {IEE Proceedings F},
+  volume  = {139},
+  number  = {5},
+  pages   = {343--350},
+  year    = {1992},
+  doi     = {10.1049/ip-f-2.1992.0048},
+}
+
+@article{ref_hungarian,
+  author  = {Kuhn, Harold W.},
+  title   = {The {Hungarian} Method for the Assignment Problem},
+  journal = {Naval Research Logistics Quarterly},
+  volume  = {2},
+  number  = {1--2},
+  pages   = {83--97},
+  year    = {1955},
+  doi     = {10.1002/nav.3800020109},
+}
