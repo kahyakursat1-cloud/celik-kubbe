@@ -222,7 +222,8 @@ maintaining reproducibility through fully synthetic Monte Carlo evaluation.
 \begin{table}[ht]
   \centering
   \caption{Comparison of C-UAV multi-sensor fusion approaches.
-           R\,=\,Radar; C\,=\,Camera; $\checkmark$\,=\,supported; --\,=\,not addressed.}
+           R\,=\,Radar; C\,=\,Camera; $\checkmark$\,=\,supported; --\,=\,not addressed.
+           Castrillo et al.\ is a review article included for threat-scoring scope coverage.}
   \label{tab:related}
   \small
   \begin{tabular}{lccccccc}
@@ -917,6 +918,10 @@ YOLOv11m inference alone achieves \SI{41}{FPS} at $1280\times720$ in FP16 mode
 on this hardware; end-to-end pipeline throughput (detection + fusion + scoring)
 runs at \SI{18}{FPS}, below the target \SI{25}{FPS@640} planned for
 Jetson Orin deployment.
+The throughput bottleneck is the detection pipeline (\SI{24}{ms} per frame),
+not the fusion or scoring stages ($<\SI{2}{ms}$ combined); TensorRT INT8
+export on Jetson Orin is expected to reduce detection latency to $\leq\SI{15}{ms}$
+at $640\times640$ resolution, bringing end-to-end throughput to the target range.
 
 \textbf{Synthetic domain gap and simulator fidelity.}
 Monte Carlo experiments use fully synthetic scenarios generated from

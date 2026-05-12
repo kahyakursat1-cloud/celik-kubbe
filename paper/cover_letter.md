@@ -1,92 +1,106 @@
 # Cover Letter — Drones (MDPI)
 
-**To:** Editors-in-Chief, Drones (MDPI)
+**To:** Editors-in-Chief, *Drones* (MDPI)
 
-**Re:** Submission — *"Adaptive Explainable Threat Scoring with Cross-Modality
-Uncertainty Quantification for Multi-Sensor Counter-UAV Systems:
-A Synthetic-to-Real Evaluation Framework"*
+**Re:** Original Research Submission —
+*"Context-Sensitive Explainable Threat Scoring with Confidence-Weighted
+Cross-Modal Fusion for Multi-Sensor Counter-UAV Systems:
+A Physics-Based Simulation Framework"*
 
 ---
 
 Dear Editors,
 
-We are pleased to submit the above manuscript for consideration in *Drones* (MDPI).
+I am pleased to submit the above manuscript for consideration as an original
+research article in *Drones* (MDPI).
 
-## Why *Drones*?
+## Scope Alignment
 
-This work directly addresses the journal's core scope: novel methodologies for
-UAV/counter-UAV systems. Recent *Drones* publications on sensor fusion
-(doi:10.3390/drones6100274), explainable AI for UAV applications
-(doi:10.3390/drones8010004), and deep learning detection (doi:10.3390/drones7030150)
-confirm the journal's receptivity to simulation-based evaluation frameworks
-when physical hardware testing is not yet possible.
+This work directly addresses *Drones*' core scope on counter-UAV (C-UAV) system
+methodologies. It presents **ContextFusion**: a context-sensitive explainable AI
+(XAI) framework for multi-sensor threat tracking that combines X-band FMCW radar
+with YOLOv11m camera detections. The manuscript contributes (i) a novel
+confidence-weighted log-linear MAP fusion model, (ii) context-sensitive threat
+weights with SHAP-based decision-layer attribution, and (iii) a reproducible
+physics-based simulation suite enabling rigorous evaluation without physical
+hardware access.
 
 ## Three Novel Contributions
 
-**1. Adaptive XAI Threat Weights.**
-Unlike existing fixed-weight fusion approaches, our system dynamically adjusts
-threat scoring factors ($r$-, $v$-, $c$-factors) based on scene complexity,
-sensor confidence, and environmental context. SHAP-based attribution provides
-operator-interpretable explanations for every engagement decision.
+**1. Context-Sensitive XAI Threat Scoring.**
+Threat weights ($r$-, $v$-, $c$-factors) adapt dynamically to scene complexity,
+multi-threat density, and sensor dropout conditions. SHAP attribution surfaces
+the dominant scoring driver (*range*, *velocity*, or *classification confidence*)
+at each timestep, moving XAI from the perception layer to the
+**decision layer** — enabling real-time operator trust calibration in
+high-stakes C-UAV engagement scenarios.
 
-**2. Cross-Modality Uncertainty Quantification.**
-We introduce a Bayesian framework combining FMCW radar SNR and YOLOv11m
-detection confidence into calibrated fusion decisions with explicit uncertainty
-bounds. This directly addresses the reviewer concern "how is explainability
-measured?" — uncertainty quantifies when the system should defer to the operator.
+**2. Confidence-Weighted Cross-Modal Fusion.**
+A log-linear MAP fusion model propagates YOLOv11m detection confidence and
+radar CA-CFAR SNR into a composite association score with explicit theoretical
+grounding. The framework is designed to be extended with learned fusion weights
+(attention-based or Bayesian network) once real paired radar-camera data becomes
+available.
 
-**3. Physics-Based Synthetic Evaluation Framework.**
-A high-fidelity radar simulator implementing the full radar range equation,
-Swerling Case 1 fluctuation model, flat-earth multipath, sinc² antenna pattern,
-and CA-CFAR detection is released with the paper. This enables rigorous
-evaluation without physical hardware access, with Monte Carlo statistical
-validation ($N = 50$, 1000 tracker evaluations, Bonferroni-corrected Wilcoxon
-tests).
+**3. Physics-Based Reproducible Evaluation Framework.**
+A high-fidelity radar simulator implementing the radar range equation, Swerling
+Case 1 RCS fluctuations, flat-earth multipath, and CA-CFAR detection enables
+Monte Carlo evaluation ($N = 50$ runs per scenario, $N_\text{total} = 200$
+pooled) without physical hardware. The simulator is validated against closed-form
+predictions ($R^4$ range law, CA-CFAR $P_\text{FA} = 10^{-6}$).
 
 ## Key Results
 
-| Metric | Çelik Kubbe (Ours) | Best Baseline (DeepSORT) |
-|--------|-------------------|--------------------------|
-| Mean MOTA | **0.645 ± 0.18** | −0.038 |
-| Multi-threat MOTA | **0.655** | −0.008 |
-| Significance | — | p < 0.0001 (corrected) |
-| Effect size (Cliff's δ) | — | 0.947 (large) |
+| Metric | ContextFusion (Ours) | DeepSORT (best baseline) |
+|--------|---------------------|--------------------------|
+| Mean MOTA (all scenarios) | **0.645** [95% CI: 0.618–0.672] | −0.038 |
+| Sensor Dropout MOTA | **0.569** | −0.068 |
+| Low-SNR MOTA | **0.675** | −0.048 |
+| Significant comparisons | — | 12 of 16 (Bonferroni-corrected Wilcoxon) |
+| Effect size | — | Cliff's δ > 0.70 (large) |
 
-## Simulation-Only Strategy
+## Simulation-Only Transparency
 
-We acknowledge the absence of physical hardware validation and address this
-transparently:
-- The paper explicitly discusses the simulation-to-real gap (Section 7.1)
-  and rates the current implementation at TRL 4.
-- The physics-based simulator is validated against closed-form predictions
-  ($R^4$ law, CA-CFAR PFA), not just empirically tuned.
-- Planned future work includes Drone-vs-Bird cross-dataset evaluation and
-  Jetson Orin field deployment, described in Section 7.2.
+I acknowledge the absence of physical hardware validation and address it
+explicitly in Section 7 (Limitations):
 
-*Drones* has published simulation-based C-UAV research; we believe this work
-meets the standard for such contributions through its statistical rigor,
-code reproducibility, and transparent limitation disclosure.
+- The system is assessed at **TRL 4** (component validation in laboratory
+  environment), with a concrete three-phase field validation programme
+  (AERIS-10 static-range RCS characterisation → DJI Matrice 300 dynamic
+  flight trials → Jetson Orin INT8 pipeline benchmarking) described as
+  future work.
+- Monte Carlo results reflect *within-simulator variability*; the paper
+  explicitly states they should not be interpreted as guarantees of
+  real-world generalisation.
+- A cross-dataset evaluation on the Drone-vs-Bird benchmark (889 frames,
+  real imagery) provides a partial, independent generalisation check
+  (Section 6.4).
+
+*Drones* has published simulation-based C-UAV research where physical
+testbeds were unavailable; this work meets that standard through statistical
+rigour, physics-validated simulation, and transparent limitation disclosure.
 
 ## Reproducibility
 
-Complete source code, synthetic datasets, Docker environment, and parameter
-seeds are released with the paper (GitHub link upon acceptance).
-All experiments are deterministically reproducible via `random.seed()` controls.
+Complete source code, evaluation scripts, and configuration are available at:
+**https://github.com/kahyakursat1-cloud/celik-kubbe**
+(reviewer access enabled; will be made fully public upon acceptance).
+All Monte Carlo experiments are deterministically reproducible via
+`random.seed()` controls specified in `config.yaml`.
 
 ## Conflict of Interest
 
-The authors declare no conflicts of interest. This work was not funded by any
-defense contractor or government weapons program.
+The author declares no conflicts of interest. This research received no
+external funding. The proposed framework is designed exclusively for
+defensive civil airspace protection applications.
 
-We believe this manuscript makes a valuable contribution to the counter-UAV
-research community and look forward to the reviewers' assessment.
+I believe this manuscript makes a substantive contribution to the C-UAV
+research community through its combination of context-aware XAI,
+physics-principled fusion, and reproducible open-source evaluation.
+I look forward to the reviewers' assessment.
 
 Sincerely,
 
-**Kürşat Kahya**  
-Çukurova Science and Art Center, Adana, Turkey  
+**Kürşat Kahya**
+Çukurova Science and Art Center, Adana, Turkey
 kahyakursat1@gmail.com
-
----
-
-*Word count: ~250 (abstract) + ~5000 (body) = within Drones 10-15 page guideline.*
