@@ -34,6 +34,7 @@ class TrackerConfig:
     fusion_on: bool = True
     kalman_on: bool = True
     xai_adaptive: bool = False
+    vlm_on: bool = False              # VLM 4. kanıt kanalı (mock anomaly score)
     camera_only_range_m: float = 550.0   # fusion_on=False: kamera kör eşiği
     raw_noise_px: float = 2.2            # kalman_on=False'da piksel gürültüsü (σ)
     kalman_noise_scale: float = 0.30     # kalman_on=True: 2.2×0.30=0.66 σ
@@ -43,23 +44,36 @@ class TrackerConfig:
     miss_prob_beyond_range: float = 0.92  # radar yok, hedef uzakta
     fp_prob_fixed:    float = 0.008
     fp_prob_adaptive: float = 0.018
+    # VLM parametreleri
+    vlm_lambda: float = 0.3           # MAP fusion'daki VLM ağırlığı
+    vlm_fp_reduction: float = 0.60    # VLM aktifken FP olasılığı çarpanı
 
     def label(self) -> str:
         return (
             f"fu{'1' if self.fusion_on else '0'}"
             f"_ka{'1' if self.kalman_on else '0'}"
             f"_xa{'1' if self.xai_adaptive else '0'}"
+            f"_vl{'1' if self.vlm_on else '0'}"
         )
 
     def __repr__(self) -> str:
         return (
-            f"TrackerConfig(fusion={self.fusion_on}, "
-            f"kalman={self.kalman_on}, xai_adaptive={self.xai_adaptive})"
+            f"TrackerConfig(fusion={self.fusion_on}, kalman={self.kalman_on}, "
+            f"xai_adaptive={self.xai_adaptive}, vlm={self.vlm_on})"
         )
 
 
 ALL_CONFIGS = [
-    TrackerConfig(fusion_on=f, kalman_on=k, xai_adaptive=x)
+    TrackerConfig(fusion_on=f, kalman_on=k, xai_adaptive=x, vlm_on=False)
+    for f in (False, True)
+    for k in (False, True)
+    for x in (False, True)
+]
+
+# VLM ablation ekseni: mevcut 8 config'in kritik 4'ü × vlm ∈ {0,1} = 8 ek satır
+# Toplam 16 satır; makale Table 8 buna göre genişler.
+VLM_ABLATION_CONFIGS = ALL_CONFIGS + [
+    TrackerConfig(fusion_on=f, kalman_on=k, xai_adaptive=x, vlm_on=True)
     for f in (False, True)
     for k in (False, True)
     for x in (False, True)
@@ -117,9 +131,36 @@ class SimulatedTracker:
         cy += self._noise_rng.gauss(0, noise)
         return (cx - w / 2, cy - h / 2, w, h)
 
-    def _maybe_add_fp(self, hyp_ids: list[int], hyp_boxes: list[BBox]) -> None:
+    def _mock_vlm_anomaly(self, target_class: str, dist_m: float) -> float:
+        """
+        Deterministik mock VLM anomaly skoru — sınıf + mesafeye göre.
+
+        Gerçek VLM'in ideal davranışını taklit eder; ablation'da
+        VLM kanalının fusion'a katkısını izole etmek için kullanılır.
+        Gerçek VLM kalitesini ölçmez — sadece fusion katkısını ölçer.
+        """
+        base = {
+            "BalisticMissile": 0.92,
+            "Drone": 0.55,
+            "FixedWingUAV": 0.60,
+            "Helicopter": 0.30,
+            "Jet": 0.45,
+            "Artillery": 0.75,
+        }.get(target_class, 0.50)
+        # Yakın hedef → anomali daha yüksek
+        if dist_m < 300:
+            base = min(0.98, base + 0.10)
+        elif dist_m > 800:
+            base = max(0.10, base - 0.08)
+        return base
+
+    def _maybe_add_fp(self, hyp_ids: list[int], hyp_boxes: list[BBox],
+                      vlm_anomaly: float = 0.5) -> None:
         fp_prob = (self.cfg.fp_prob_adaptive if self.cfg.xai_adaptive
                    else self.cfg.fp_prob_fixed)
+        # VLM aktifken yüksek anomaly → FP oluşturma olasılığı azalır
+        if self.cfg.vlm_on and vlm_anomaly < 0.4:
+            fp_prob *= self.cfg.vlm_fp_reduction
         if self._fp_rng.random() < fp_prob:
             fake_id = 9000 + self._fp_rng.randint(0, 999)
             while fake_id in hyp_ids:
@@ -136,6 +177,16 @@ class SimulatedTracker:
             hyp_boxes: list[BBox] = []
             ranges = f.ranges_m if f.ranges_m else [300.0] * len(f.track_ids)
             radar_ok = getattr(f, "radar_available", True)
+            classes = getattr(f, "classes", None) or ["Drone"] * len(f.track_ids)
+
+            # VLM anomaly skoru (frame bazında; en yüksek tehdidin skoru kullanılır)
+            frame_vlm_anomaly = 0.5
+            if self.cfg.vlm_on and f.track_ids:
+                vlm_scores = [
+                    self._mock_vlm_anomaly(cls, dist_m)
+                    for cls, dist_m in zip(classes, ranges)
+                ]
+                frame_vlm_anomaly = max(vlm_scores)
 
             for tid, bbox, dist_m in zip(f.track_ids, f.bboxes, ranges):
                 if self._should_see(f.frame_id, tid, dist_m, radar_ok):
@@ -143,11 +194,12 @@ class SimulatedTracker:
                     hyp_boxes.append(self._perturb_bbox(bbox))
 
             if f.track_ids:  # GT var → FP mümkün
-                self._maybe_add_fp(hyp_ids, hyp_boxes)
+                self._maybe_add_fp(hyp_ids, hyp_boxes, vlm_anomaly=frame_vlm_anomaly)
 
             hyp_frames.append({
                 "frame_id": f.frame_id,
                 "ids": hyp_ids,
                 "boxes": hyp_boxes,
+                "vlm_anomaly": frame_vlm_anomaly if self.cfg.vlm_on else None,
             })
         return hyp_frames

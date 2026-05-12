@@ -27,7 +27,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from eval.simulated_tracker import SimulatedTracker, TrackerConfig, ALL_CONFIGS
+from eval.simulated_tracker import (
+    SimulatedTracker, TrackerConfig, ALL_CONFIGS, VLM_ABLATION_CONFIGS,
+)
 from eval.scenarios import build_all
 from eval.metrics import compute_mot_metrics
 
@@ -45,9 +47,10 @@ def _run_one(config: TrackerConfig, scenario: dict, seed: int) -> dict[str, floa
 
 class AblationRunner:
     """
-    8 TrackerConfig × tüm senaryolar × n_seeds → pandas DataFrame.
+    8 TrackerConfig (vlm_on=False) veya 16 TrackerConfig (--enable-vlm)
+    × tüm senaryolar × n_seeds → pandas DataFrame.
 
-    Sütunlar: config, scenario, seed, MOTA, MOTP_IoU, IDF1, IDSW, FP, FN
+    Sütunlar: config, scenario, seed, MOTA, MOTP_IoU, IDF1, IDSW, FP, FN, vlm_on
     """
 
     def __init__(
@@ -56,8 +59,14 @@ class AblationRunner:
         n_seeds: int = 5,
         base_seed: int = 0,
         verbose: bool = True,
+        enable_vlm: bool = False,
     ):
-        self.configs = configs or ALL_CONFIGS
+        if configs is not None:
+            self.configs = configs
+        elif enable_vlm:
+            self.configs = VLM_ABLATION_CONFIGS   # 16 config
+        else:
+            self.configs = ALL_CONFIGS             # 8 config
         self.n_seeds = n_seeds
         self.base_seed = base_seed
         self.verbose = verbose
@@ -77,6 +86,7 @@ class AblationRunner:
                         "fusion_on": cfg.fusion_on,
                         "kalman_on": cfg.kalman_on,
                         "xai_adaptive": cfg.xai_adaptive,
+                        "vlm_on": cfg.vlm_on,
                         "scenario": sc["name"],
                         "seed": seed,
                         **{k: v for k, v in metrics.items()
@@ -134,13 +144,20 @@ def main() -> int:
     parser.add_argument("--base-seed", type=int, default=0)
     parser.add_argument("--out", type=Path, default=Path("results/ablation_raw.csv"))
     parser.add_argument("--agg-out", type=Path, default=Path("results/ablation_agg.csv"))
+    parser.add_argument("--enable-vlm", action="store_true",
+                        help="VLM eksenini ekle: 8 → 16 config (vlm_on ∈ {0,1})")
     args = parser.parse_args()
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"Ablation koşusu: 8 config × {args.seeds} seed × 4 senaryo "
-          f"= {8 * args.seeds * 4} değerlendirme")
-    runner = AblationRunner(n_seeds=args.seeds, base_seed=args.base_seed)
+    n_configs = 16 if args.enable_vlm else 8
+    print(f"Ablation koşusu: {n_configs} config × {args.seeds} seed × 4 senaryo "
+          f"= {n_configs * args.seeds * 4} değerlendirme"
+          + (" [VLM ekseni aktif]" if args.enable_vlm else ""))
+    runner = AblationRunner(
+        n_seeds=args.seeds, base_seed=args.base_seed,
+        enable_vlm=args.enable_vlm,
+    )
     df = runner.run()
     df.to_csv(args.out, index=False)
     print(f"\n[OK] Ham sonuçlar → {args.out}")
@@ -152,7 +169,29 @@ def main() -> int:
     pivot = AblationRunner.pivot_mota(agg)
     print("\nMOTA Özet (config × senaryo):")
     print(pivot.to_string())
+
+    # VLM etki özeti
+    if args.enable_vlm and "vlm_on" in df.columns:
+        _print_vlm_delta(df)
+
     return 0
+
+
+def _print_vlm_delta(df: pd.DataFrame) -> None:
+    """VLM açık/kapalı arasındaki ortalama ΔMOTA farkını yazdır."""
+    import numpy as np
+    grp = df.groupby(["fusion_on", "kalman_on", "xai_adaptive", "vlm_on"])["MOTA"]
+    pairs = []
+    for (fu, ka, xa, vlm), grp_data in grp:
+        mean = grp_data.replace(-np.inf, np.nan).mean()
+        pairs.append({"fu": fu, "ka": ka, "xa": xa, "vlm": vlm, "mota": mean})
+    import pandas as _pd
+    p = _pd.DataFrame(pairs)
+    off = p[p.vlm == False].set_index(["fu", "ka", "xa"])["mota"]
+    on  = p[p.vlm == True ].set_index(["fu", "ka", "xa"])["mota"]
+    delta = (on - off).dropna()
+    print(f"\nVLM ΔMOTA (ortalama): {delta.mean():+.4f} "
+          f"[min {delta.min():+.4f}, max {delta.max():+.4f}]")
 
 
 if __name__ == "__main__":
