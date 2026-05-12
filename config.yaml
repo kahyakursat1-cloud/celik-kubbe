@@ -37,6 +37,31 @@ fuzyon:
   aci_esigi_deg: 15.0            # Açısal eşleşme eşiği
   mesafe_esigi_km: 1.0           # Mesafe eşleşme eşiği
   zaman_asimi_s: 5.0             # İz düşürme süresi
+  vlm_lambda: 0.3                # MAP fusion'da VLM evidence kanalı katsayısı (0=devre dışı)
+
+# --- XAI (Açıklanabilir AI) — Tehdit Skorlaması ---
+xai:
+  alpha_r_base: 0.5              # Range faktörü temel ağırlığı
+  alpha_v_base: 0.3              # Velocity faktörü temel ağırlığı
+  alpha_c_base: 0.2              # Class faktörü temel ağırlığı
+  clip_min: 0.1                  # α kırpma alt sınırı
+  clip_max: 0.8                  # α kırpma üst sınırı
+  multi_threat_esigi: 3          # 3+ aktif track → multi_threat modu
+
+# --- VLM (Vision-Language Model — Yerel) ---
+vlm:
+  aktif: false                   # true: gerçek model yükle; false: mock
+  mock: true                     # Geliştirme: deterministik mock kullan
+  model_id: "Qwen/Qwen2-VL-2B-Instruct"
+  device: "cuda"                 # "cuda" | "cpu" | "auto"
+  int8: true                     # bitsandbytes INT8 quantization
+  prompt_template: "src/prompts/vlm_threat_brief.txt"
+  cagri_periyodu_hz: 1.0         # Otomatik tetikleme frekansı
+  yeni_track_tetikle: true       # Yeni track → anında analiz
+  belirsiz_konfidans_tetikle: true
+  belirsiz_konfidans_araligi: [0.4, 0.6]
+  throttle_s: 2.0                # Min. tetikleme aralığı
+  cache_size: 64
 
 # --- Gimbal / Takip ---
 gimbal:

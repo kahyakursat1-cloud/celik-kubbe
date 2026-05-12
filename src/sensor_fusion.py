@@ -24,6 +24,12 @@ from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
 from src.kalman_filter import KalmanFilter2D
+from src.xai_attribution import (
+    AlphaPolicy,
+    FusionContext,
+    ThreatExplainer,
+    ShapAttribution,
+)
 
 logger = logging.getLogger("sensor_fusion")
 
@@ -53,11 +59,16 @@ class FusedTrack:
     # Tehdit seviyesi (XAI Tabanlı Skorlama)
     tehdit_seviyesi: str = "DÜŞÜK"
     tehdit_skoru: float = 0.0
+    # SHAP attribution (factor contributions to threat score)
+    shap_attribution: Optional["ShapAttribution"] = None
+    # VLM scene analysis (optional 4th evidence channel)
+    vlm_anomaly_score: float = 0.5  # neutral prior
+    vlm_brief: str = ""
     # Kalman Filtresi
     kalman: object = field(default=None)
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "track_id": self.track_id,
             "range_km": self.range_km,
             "velocity_ms": self.velocity_ms,
@@ -71,6 +82,12 @@ class FusedTrack:
             "tehdit_skoru": round(self.tehdit_skoru, 2),
             "son_guncelleme": self.son_guncelleme,
         }
+        if self.shap_attribution is not None:
+            d["shap"] = self.shap_attribution.to_dict()
+        if self.vlm_brief:
+            d["vlm_brief"] = self.vlm_brief
+            d["vlm_anomaly_score"] = round(self.vlm_anomaly_score, 3)
+        return d
 
 # ── XAI Tabanlı Tehdit Algoritması (Fuzzy/Ağırlıklı Skor) ───────────────────
 def _tehdit_hesapla(track: FusedTrack) -> tuple[str, float]:
@@ -142,7 +159,8 @@ class SensorFusion(QObject):
     IZ_ZAMAN_ASIMI_S: float = 5.0        # İz düşme süresi (s)
     KAMERA_ACI_GENISLIGI_DEG: float = 120.0  # Kamera görüş açısı
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, alpha_policy: Optional[AlphaPolicy] = None,
+                 vlm_lambda: float = 0.3):
         super().__init__(parent)
         self._radar_tespitler: list[dict] = []
         self._kamera_tespitler: list[dict] = []
@@ -150,10 +168,65 @@ class SensorFusion(QObject):
         self._sonraki_id: int = 1
         self._son_radar_zaman: float = 0.0
         self._son_kamera_zaman: float = 0.0
+        # XAI: dinamik α policy + SHAP explainer (makale Tablo 4 runtime karşılığı)
+        self._explainer = ThreatExplainer(alpha_policy or AlphaPolicy())
+        # VLM evidence channel ağırlığı (MAP fusion'da log-likelihood ratio katsayısı)
+        self._vlm_lambda = vlm_lambda
 
     @property
     def aktif_izler(self) -> dict[int, FusedTrack]:
         return self._aktif_izler
+
+    def _current_context(self) -> FusionContext:
+        """
+        Anlık operasyonel bağlamı türet — α policy bunu kullanır.
+        Multi-threat density, sensor dropout, average SNR.
+        """
+        simdi = time.time()
+        # Sensor dropout: son güncellemeden >2s geçtiyse o sensör 'dropped' say
+        radar_dropout = (simdi - self._son_radar_zaman) > 2.0 if self._son_radar_zaman else False
+        kamera_dropout = (simdi - self._son_kamera_zaman) > 2.0 if self._son_kamera_zaman else False
+        # Ortalama SNR (aktif izlerden)
+        snr_list = [t.radar_snr_db for t in self._aktif_izler.values() if t.radar_snr_db > 0]
+        ortalama_snr = sum(snr_list) / len(snr_list) if snr_list else None
+        return FusionContext(
+            aktif_track_sayisi=len(self._aktif_izler),
+            radar_dropout=radar_dropout,
+            kamera_dropout=kamera_dropout,
+            ortalama_snr_db=ortalama_snr,
+        )
+
+    def _skorla_ve_acikla(self, track: FusedTrack) -> tuple[str, float, ShapAttribution]:
+        """
+        Mevcut _tehdit_hesapla'nın yerine geçen, dinamik α + SHAP attribution
+        üreten yeni hesaplama. VLM anomaly_score 4. evidence kanalı olarak
+        log-linear MAP fusion mantığıyla eklenir.
+
+        VLM katkısı: e_vlm = 0.5 neutral, λ=0 davranışı identical to baseline.
+        """
+        ctx = self._current_context()
+        seviye, skor, attr = self._explainer.explain_with_label(track, ctx)
+
+        # ── VLM 4. evidence kanalı (log-likelihood ratio additive contribution) ──
+        # e_vlm ∈ [0,1]; 0.5 = neutral, >0.5 → tehdit lehine, <0.5 → tehdit aleyhine
+        # log[P(e|T=1)/P(e|T=0)] ≈ logit(e_vlm) (uniform Beta priors için)
+        if self._vlm_lambda > 0 and track.vlm_anomaly_score != 0.5:
+            e = max(0.01, min(0.99, track.vlm_anomaly_score))
+            import math as _math
+            log_lr = _math.log(e / (1.0 - e))  # logit
+            vlm_bonus = self._vlm_lambda * log_lr * 5.0  # ölçek: 5 puan/unit logit
+            skor = max(0.0, min(100.0, skor + vlm_bonus))
+            # Etiketi tekrar belirle
+            if skor >= 80.0:
+                seviye = "KRİTİK"
+            elif skor >= 50.0:
+                seviye = "YÜKSEK"
+            elif skor >= 30.0:
+                seviye = "ORTA"
+            else:
+                seviye = "DÜŞÜK"
+
+        return seviye, skor, attr
 
     def radar_girdisi(self, tespitler: list):
         """Radar tespitlerini al ve füzyonu tetikle."""
@@ -246,7 +319,7 @@ class SensorFusion(QObject):
                 track.guven = k_det.get("guven", 0.0)
                 track.kaynak = "fuzyon"
                 track.son_guncelleme = simdi
-                track.tehdit_seviyesi, track.tehdit_skoru = _tehdit_hesapla(track)
+                track.tehdit_seviyesi, track.tehdit_skoru, track.shap_attribution = self._skorla_ve_acikla(track)
 
         # ── Adım 2: Eşleşmeyen radar tespitleri → yalnız-radar izi ──
         for ri, r_det in enumerate(self._radar_tespitler):
@@ -273,7 +346,7 @@ class SensorFusion(QObject):
             if track.kaynak != "fuzyon":
                 track.kaynak = "yalniz_radar"
             track.son_guncelleme = simdi
-            track.tehdit_seviyesi, track.tehdit_skoru = _tehdit_hesapla(track)
+            track.tehdit_seviyesi, track.tehdit_skoru, track.shap_attribution = self._skorla_ve_acikla(track)
 
         # ── Adım 3: Eşleşmeyen kamera tespitleri → yalnız-kamera izi ──
         for ki, k_det in enumerate(self._kamera_tespitler):
@@ -301,7 +374,7 @@ class SensorFusion(QObject):
             if track.kaynak != "fuzyon":
                 track.kaynak = "yalniz_kamera"
             track.son_guncelleme = simdi
-            track.tehdit_seviyesi, track.tehdit_skoru = _tehdit_hesapla(track)
+            track.tehdit_seviyesi, track.tehdit_skoru, track.shap_attribution = self._skorla_ve_acikla(track)
 
         # ── Adım 4: Süresi dolan izleri kaldır ──
         suresi_dolen = [
@@ -321,7 +394,7 @@ class SensorFusion(QObject):
                 track.range_km = math.hypot(fx, fy)
                 track.bearing_deg = math.degrees(math.atan2(fy, fx))
                 # Tehdit seviyesini tahmin üzerinden yeniden hesapla (mesafe değişmiş olabilir)
-                track.tehdit_seviyesi, track.tehdit_skoru = _tehdit_hesapla(track)
+                track.tehdit_seviyesi, track.tehdit_skoru, track.shap_attribution = self._skorla_ve_acikla(track)
 
             track.yasam_suresi = simdi - track.olusturma_zamani
             sonuclar.append(track.to_dict())

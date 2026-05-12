@@ -1,0 +1,18 @@
+# ContextFusion — Yerel VLM bağımlılıkları (ayrı izole edilmiş)
+# Ana requirements.txt'ye eklemeden önce venv'de test edin:
+#   pip install -r requirements-vlm.txt
+#
+# Edge hedef: Jetson Orin NX 16GB; INT8 quantization şart.
+# Qwen2-VL desteği transformers>=4.45 gerektirir.
+
+transformers>=4.45
+accelerate>=0.34
+bitsandbytes>=0.43        # INT8 quantization (Jetson için aarch64 wheel: nvidia kanalı)
+qwen-vl-utils>=0.0.8      # Qwen2-VL yardımcıları (image_processor)
+Pillow>=10.0
+torch>=2.2                # Mevcut requirements.txt ile uyumlu olmalı
+
+# Opsiyonel: ONNX/TensorRT export (Jetson INT8 conversion için)
+optimum>=1.20
+onnx>=1.16
+onnxruntime-gpu>=1.18     # Jetson'da: onnxruntime-gpu-aarch64 (özel wheel)
