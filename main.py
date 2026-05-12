@@ -6,7 +6,8 @@ import random
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget, QTableWidgetItem, QFrame,
-    QHeaderView, QSizePolicy, QGridLayout, QProgressBar
+    QHeaderView, QSizePolicy, QGridLayout, QProgressBar,
+    QTextEdit, QToolTip
 )
 from PySide6.QtCore import Qt, QTimer, QPointF, QRectF, QSize
 from PySide6.QtGui import (
@@ -169,6 +170,23 @@ QProgressBar::chunk {{
     background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #10b981, stop: 1 #34d399);
     border-radius: 3px;
 }}
+QTextEdit {{
+    background-color: rgba(0, 10, 22, 0.92);
+    color: #cbd5e1;
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    border-radius: 6px;
+    font-family: "Consolas", monospace;
+    font-size: 11px;
+    padding: 4px;
+}}
+QToolTip {{
+    background-color: #0f1f30;
+    color: #e2e8f0;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 4px 8px;
+}}
 """
 
 
@@ -234,11 +252,13 @@ class RadarWidget(QWidget):
         super().__init__(parent)
         self.setMinimumSize(500, 500)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMouseTracking(True)
         self.sweep_angle = 0.0
         self.trail_angles: list[float] = []
         self.threats: list[Threat] = []
         self.friendlies: list[FriendlyAsset] = [FriendlyAsset() for _ in range(3)]
         self.selected_threat: str | None = None
+        self._vlm_briefs: dict[str, str] = {}  # thr.id → brief metni
 
     def set_threats(self, threats: list[Threat]):
         self.threats = threats
@@ -446,6 +466,30 @@ class RadarWidget(QWidget):
         painter.setPen(QPen(QColor(ORANGE), 2))
         painter.setBrush(QBrush(QColor(255, 120, 0, 200)))
         painter.drawPolygon(poly)
+
+    def set_vlm_briefs(self, briefs: dict):
+        """VLM per-track briflerini sakla; tooltip için kullanılır."""
+        self._vlm_briefs = briefs
+
+    def mouseMoveEvent(self, event):
+        w, h = self.width(), self.height()
+        cx, cy = w / 2, h / 2
+        radius = min(cx, cy) - 10
+        pos = event.position()
+        px, py = pos.x(), pos.y()
+        for thr in self.threats:
+            if thr.fade <= 0:
+                continue
+            tx = cx + thr.x * radius
+            ty = cy + thr.y * radius
+            if math.sqrt((px - tx) ** 2 + (py - ty) ** 2) < 20:
+                brief = self._vlm_briefs.get(thr.id, "")
+                if brief:
+                    tip = f"<b>{thr.id}</b> ({thr.threat_level})<br>{brief}"
+                    QToolTip.showText(event.globalPosition().toPoint(), tip, self)
+                    return
+        QToolTip.hideText()
+        super().mouseMoveEvent(event)
 
 
 # ── Battery Status Widget ──────────────────────────────────────────────────────
@@ -658,6 +702,23 @@ class CelikKubbeGUI(QMainWindow):
             self._blackbox.start()
         except Exception as _be:
             logging.getLogger(__name__).warning(f"Kara Kutu başlatılamadı: {_be}")
+
+        # ── VLM Sahne Analizörü ───────────────────────────────────────────────
+        self._vlm_analyzer = None
+        self._vlm_track_order: list[str] = []  # son çağrıdaki tehdit ID sırası
+        self._vlm_call_counter: int = 0         # data_timer sayacı (1 Hz kısıtı)
+        _vcfg = _app_cfg.get("vlm", {})
+        try:
+            from src.vlm_scene_analyzer import VlmSceneAnalyzer
+            self._vlm_analyzer = VlmSceneAnalyzer(
+                mock=_vcfg.get("mock", True),
+                throttle_s=_vcfg.get("throttle_s", 2.0),
+                cache_size=_vcfg.get("cache_size", 64),
+            )
+            self._vlm_analyzer.analyze_frame_signal.connect(self._on_vlm_analiz)
+            logging.getLogger(__name__).info("VLM analizör başlatıldı (mock=%s)", _vcfg.get("mock", True))
+        except Exception as _ve:
+            logging.getLogger(__name__).warning(f"VLM analizör başlatılamadı: {_ve}")
 
         # ── Bilgi paneli sekmeleri ────────────────────────────────────────────
         try:
@@ -978,7 +1039,143 @@ class CelikKubbeGUI(QMainWindow):
         ctrl_box.addStretch()
         h.addLayout(ctrl_box, stretch=1)
 
+        # ── AI Sahne Brifi paneli ──────────────────────────────────────────────
+        brief_box = QVBoxLayout()
+        brief_box.setSpacing(4)
+
+        brief_hdr_row = QHBoxLayout()
+        brief_hdr = QLabel("▶ AI SAHNE BRİFİ")
+        brief_hdr.setObjectName("section_hdr")
+        brief_hdr_row.addWidget(brief_hdr)
+        brief_hdr_row.addStretch()
+        btn_brief = QPushButton("🧠 BRİF İSTE")
+        btn_brief.setFixedHeight(22)
+        btn_brief.setStyleSheet(
+            "font-size: 10px; padding: 2px 8px; "
+            "background-color: rgba(30, 60, 90, 0.8); "
+            "border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px;"
+        )
+        btn_brief.clicked.connect(lambda: self._trigger_vlm_if_needed(force=True))
+        brief_hdr_row.addWidget(btn_brief)
+        brief_box.addLayout(brief_hdr_row)
+
+        self._vlm_brief_edit = QTextEdit()
+        self._vlm_brief_edit.setReadOnly(True)
+        self._vlm_brief_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._vlm_brief_edit.setFixedHeight(140)
+        self._vlm_brief_edit.setHtml(
+            "<span style='color:#475569;font-style:italic;'>"
+            "VLM analizi bekleniyor…</span>"
+        )
+        brief_box.addWidget(self._vlm_brief_edit)
+
+        self._vlm_latency_lbl = QLabel("—")
+        self._vlm_latency_lbl.setStyleSheet(f"color: {TEXT_DIM}; font-size: 9px;")
+        brief_box.addWidget(self._vlm_latency_lbl)
+
+        h.addLayout(brief_box, stretch=2)
+
         return w
+
+    # ── VLM entegrasyonu ─────────────────────────────────────────────────────
+
+    # Tehdit seviyesi → renk eşlemesi (HTML briflerde kullanılır)
+    _LEVEL_COLORS = {
+        "KRİTİK": "#ff4040",
+        "YÜKSEK": "#ff8800",
+        "ORTA":   "#ffcc00",
+        "DÜŞÜK":  "#44dd88",
+    }
+
+    def _trigger_vlm_if_needed(self, force: bool = False):
+        """Aktif tehdit listesiyle VLM analizini tetikle."""
+        if self._vlm_analyzer is None:
+            return
+        active = [t for t in self.threats if not t.engaged]
+        if not active:
+            return
+        self._vlm_track_order = [t.id for t in active]
+        tracks_payload = [
+            {
+                "track_id": i,
+                "sinif": t.sinif,
+                "range_km": round(t.range_km(), 2),
+                "velocity_ms": round(t.velocity_ms, 1),
+                "bearing_deg": round(t.bearing(), 1),
+                "conf": round(getattr(t, "tehdit_skoru", 50.0) / 100.0, 2),
+            }
+            for i, t in enumerate(active)
+        ]
+        if force and hasattr(self._vlm_analyzer, 'reset_cache'):
+            self._vlm_analyzer.reset_cache()
+        self._vlm_analyzer.queue_analysis(None, tracks_payload)
+
+    def _on_vlm_analiz(self, result):
+        """VlmSceneAnalyzer'dan gelen analiz sonucunu GUI'ye yansıt."""
+        # track_order listesinden idx → thr.id → brief eşlemesi kur
+        briefs_by_id: dict[str, str] = {}
+        for idx, thr_id in enumerate(self._vlm_track_order):
+            brief = result.per_track.get(idx, "")
+            if brief:
+                briefs_by_id[thr_id] = brief
+
+        # Radar widget'ta hover tooltip için güncelle
+        self.radar.set_vlm_briefs(briefs_by_id)
+
+        # HTML brief formatla
+        html_parts: list[str] = []
+
+        # Özet satırı
+        html_parts.append(
+            f"<p style='margin:0 0 3px;padding:0;'>"
+            f"<span style='color:#38bdf8;font-weight:bold;'>ÖZET:</span>&nbsp;"
+            f"<span style='color:#e2e8f0;'>{result.summary}</span></p>"
+        )
+
+        # Per-track brifler (aktif tehditlerin ilk 4'ü)
+        active_shown = [t for t in self.threats if not t.engaged][:4]
+        for thr in active_shown:
+            brief = briefs_by_id.get(thr.id, "")
+            if not brief:
+                continue
+            lvl = getattr(thr, "threat_level", "ORTA")
+            col = self._LEVEL_COLORS.get(lvl, "#e2e8f0")
+            html_parts.append(
+                f"<p style='margin:0;padding:1px 0;'>"
+                f"<span style='color:{col};font-weight:bold;'>• {thr.id}</span>"
+                f"&nbsp;<span style='color:#64748b;'>({lvl})</span>:&nbsp;"
+                f"<span style='color:#cbd5e1;'>{brief}</span></p>"
+            )
+
+        # Anomali skoru çubuğu
+        score = result.anomaly_score
+        score_col = "#ff4040" if score > 0.75 else ("#ff8800" if score > 0.5 else "#44dd88")
+        html_parts.append(
+            f"<p style='margin:3px 0 0;padding:0;'>"
+            f"<span style='color:#64748b;'>Anomali:&nbsp;</span>"
+            f"<span style='color:{score_col};font-weight:bold;'>{score:.2f}</span>"
+            f"&nbsp;&nbsp;"
+            f"<span style='color:#334155;font-size:9px;'>"
+            f"Lat:{result.latency_ms}ms | {result.model_id}"
+            f"{'&nbsp;[MOCK]' if result.is_mock else ''}</span></p>"
+        )
+
+        self._vlm_brief_edit.setHtml("".join(html_parts))
+        mock_tag = " [MOCK]" if result.is_mock else ""
+        self._vlm_latency_lbl.setText(
+            f"Latency: {result.latency_ms} ms | {result.model_id}{mock_tag}"
+        )
+
+        # Kara kutu kaydı
+        if self._blackbox:
+            try:
+                self._blackbox.log_olay(
+                    "VLM_ANALIZ",
+                    "SAHNE",
+                    f"anomaly={score:.2f} | {result.summary[:80]}",
+                )
+            except Exception:
+                pass
 
     # ── Logic ────────────────────────────────────────────────────────────────
     def _spawn_initial_threats(self):
@@ -999,6 +1196,12 @@ class CelikKubbeGUI(QMainWindow):
         self._stat_labels["active"].setText(str(len(active)))
 
         self._update_threat_table()
+
+        # VLM periyodik tetikleyici — her 2. data tick = ~1 Hz (data_timer 500ms)
+        self._vlm_call_counter = getattr(self, '_vlm_call_counter', 0) + 1
+        if self._vlm_call_counter >= 2:
+            self._vlm_call_counter = 0
+            self._trigger_vlm_if_needed()
 
         # Gimbal takibi (sürekli güncelleme) ve Blackbox loglama
         if self._gimbal_controller and self.selected_tid:
@@ -1383,6 +1586,11 @@ class CelikKubbeGUI(QMainWindow):
             self._pipeline.durdur()
         if self._cap is not None:
             self._cap.release()
+        if self._vlm_analyzer is not None:
+            try:
+                self._vlm_analyzer.reset_cache()
+            except Exception:
+                pass
         super().closeEvent(event)
 
 
